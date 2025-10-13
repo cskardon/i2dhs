@@ -1,0 +1,42 @@
+---
+title: "Two code chunks and a list - ordered and unordered...."
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+# Week 4
+
+First we import the libraries we need:
+
+```{r "Libraries"}
+library(tidyverse)
+```
+
+Not that we actually need it as we can just do the following on its own, but it's a nice structural setup - libraries at the top, code at the bottom:
+
+```{r "Code"}
+numbers <- c(1,2,3,4,5,6)
+squared <- numbers ^ 2
+numbers
+squared
+```
+
+Takes the numbers:
+
+* 1
+* 2
+* 3
+* 4
+* 5 
+* 6
+
+and Squares them to:
+
+1. 1
+2. 4
+3. 9
+4. 16
+5. 25
+6. 36
