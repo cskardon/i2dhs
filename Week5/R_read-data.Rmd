@@ -112,7 +112,7 @@ To read in a file that is saved in the same directory as the .Rproj file:
 
 ```{r}
 library(here)
-fev_data <- read_csv(here("fev.csv"))
+fev_data <- read_csv(here("data/fev.csv"))
 ```
 
 (Remember to install the "here" package the first time.)
@@ -120,7 +120,9 @@ fev_data <- read_csv(here("fev.csv"))
 --> How would you use read_csv with the pipe operator?
 
 ```{r}
-# Add your code here!
+fev_data <-
+  here("data/fev.csv") %>% 
+    read_csv
 ```
 
 Look at the top few rows of the data:
@@ -149,20 +151,43 @@ excel_data <- read_xlsx(filename, sheet = 1) #(to read the first sheet)
 There is a text file in your dataset so you can practice: psa.txt
 
 ```{r}
-# Add your code here!
+psa <- read.table(here('data/psa.txt'))
+psa
+```
+
+
+```{r 'The readr way'}
+psa <- read_table(here('data/psa.txt'))
+psa
 ```
 
 --> Have a look at the "Useful arguments" section of the data import cheat sheet. 
 Use a few of them when you read in fev.csv and look at the data, is that what you expected?
 
 ```{r}
-# Add your code here!
+fev_data_2 <- read_csv(here("data/fev.csv"), col_names = FALSE, skip=10, n_max=10)
+fev_data_2
+```
+
+```{r}
+# fev_header <- read_csv(here("data/fev.csv"), col_names = FALSE, n_max=1, show_col_types = FALSE)
+# fev_header
+#fev_header
+# fev_data <- read_csv(here("data/fev.csv"), col_names = FALSE, skip=10, n_max=10)
+#fev_data
+# fev_combine <- read_csv(here("data/fev.csv"), col_names = FALSE, skip=10, n_max=10, col_names = fev_header[0])
+# fev_combine
 ```
 
 --> Apply the summary function to a tibble. What does it do?
 
 ```{r}
-# Add your code here!
+summary(fev_data)
+
+# fev_3 <- fev_data %>% 
+#   group_by(smoke) %>%
+#   summarise(n = n())
+# fev_3
 ```
 
 

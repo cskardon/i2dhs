@@ -1,8 +1,14 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 ```{r Packages}
 library("tidyverse")
 library("sf")
 source('functions.r')
 ```
+
+
 
 ```{r "read in file"}
 file <- "./maps/Local_Authority_Boundaries_-_Scotland.json"
