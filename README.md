@@ -9,9 +9,13 @@ Does work, but if working from the 'full root' (i.e. where the readme etc is - `
 ## `renv`
 
 To use (from root)
-1. Activate `renv`
+1. Activate `renv` -- `renv::activate()`
 2. Restart R Terminal
 3. Now start using things.
+
+### New Project?
+
+`rev::init()`
 
 
 Can now use `renv::install("tidyverse")` (e.g.) to install from multi sources not just CRAN

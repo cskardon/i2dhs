@@ -1,0 +1,67 @@
+```{r Packages}
+library("sf")
+library("ggplot2")
+library("stringr")
+library("tidyverse")
+library("readr")
+library("foreach")
+```
+
+```{r "read in file"}
+file <- "./maps/Local_Authority_Boundaries_-_Scotland.json"
+data <- st_read(file)
+
+print(data)
+```
+
+```{r }
+print(data$local_authority)
+```
+
+```{r "base plot"}
+plot(data$geometry, col = "grey")
+```
+
+```{r "base plot"}
+highlight = data[data$local_authority == "Dumfries and Galloway", ] 
+# You can access this like: data[1, ], but this filtering allows from the naming.. 
+
+plot(st_geometry(highlight), col = "red", add=TRUE)
+```
+
+Example of using `ggplot2` to render the GeoJSON.
+
+```{r "ggplot"}
+ggplot(data) +
+geom_sf(fill = "#69b3a2", color = "white") +
+theme_void()
+```
+
+Reading in the CSV file with the local authorities in.
+
+```{r "Read ScoPHO"}
+file <- './data/ScotPHO - anxiety, depression, psychosis - local authorities- all years.csv'
+scotpho = read_csv(file)
+```
+
+Need to tweak the data naming of Local Authorities:
+
+* The GeoJSON output uses `and` instead of `&`
+* In GeoJSON we have `Na h-Eileanan an Iar` in the ScotPHO data we have `Na h-Eileanan Siar`
+
+It is easier to do a replace all on the dataframe than the GeoJSON file.
+
+```{r "Tidy data for use in map"}
+scotpho$area_name = str_replace_all(scotpho$area_name, "&", "and")
+scotpho$area_name = str_replace_all(scotpho$area_name, "Siar", "an Iar")
+```
+
+If all the naming of the local authorites in the DataFrame is now correct - then the entire map should be coloured in green.
+
+```{r "Test if colouring map works"}
+for(i in 1:nrow(scotpho)){
+    la_name = scotpho[i, ]$area_name
+    highlight <- data[data$local_authority == la_name, ] 
+    plot(st_geometry(highlight), col = "green", add=TRUE)
+}
+```
