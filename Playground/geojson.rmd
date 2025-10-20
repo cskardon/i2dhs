@@ -3,40 +3,35 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r Packages}
-library("tidyverse")
-library("sf")
+library('tidyverse')
+library('sf')
 source('functions.r')
+library('here')
 ```
 
 
-
-```{r "read in file"}
-file <- "./maps/Local_Authority_Boundaries_-_Scotland.json"
-data <- st_read(file)
-
-print(data)
+```{r 'Read in boundary map'}
+scotland_la_boundary_map_path <- here('maps/Local_Authority_Boundaries_-_Scotland.json')
+map_scotland_la_boundary <- st_read(scotland_la_boundary_map_path)
 ```
 
-```{r }
-print(data$local_authority)
+```{r 'Plot the map'}
+plot(map_scotland_la_boundary$geometry, col = 'grey')
 ```
 
-```{r "base plot"}
-plot(data$geometry, col = "grey")
-```
+```{r 'Highlight one authority'}
+local_authority = 'Dumfries and Galloway'
+map_local_authority_highlight = map_scotland_la_boundary[map_scotland_la_boundary$local_authority == local_authority, ] 
 
-```{r "base plot"}
-highlight = data[data$local_authority == "Dumfries and Galloway", ] 
-# You can access this like: data[1, ], but this filtering allows from the naming.. 
-
-plot(st_geometry(highlight), col = "red", add=TRUE)
+#NB. add=TRUE allows the above plot to be augmented with the highlighting, as opposed to plotting afresh.
+plot(st_geometry(map_local_authority_highlight), col = 'red', add=TRUE)
 ```
 
 Reading in the CSV file with the local authorities in.
 
-```{r "Read ScoPHO"}
-file <- './data/ScotPHO - anxiety, depression, psychosis - local authorities- all years.csv'
-scotpho = read_csv(file)
+```{r 'Read ScotPHO dataset'}
+scotpho_data_path <- here('data/ScotPHO - anxiety, depression, psychosis - local authorities- all years.csv')
+df_scotpho = read_csv(scotpho_data_path)
 ```
 
 Need to tweak the data naming of Local Authorities:
@@ -46,16 +41,16 @@ Need to tweak the data naming of Local Authorities:
 
 It is easier to do a replace all on the dataframe than the GeoJSON file. See the [`functions.r`](./functions.r) file for the definition
 
-```{r "Tidy data for use in map"}
-scotpho = tidy_names_of_scotpho_la_for_maps(scotpho)
+```{r 'Tidy data for use in map'}
+df_scotpho = tidy_names_of_scotpho_la_for_maps(df_scotpho)
 ```
 
 If all the naming of the local authorites in the DataFrame is now correct - then the entire map should be coloured in orange.
 
-```{r "Test if colouring map works"}
-for(i in 1:nrow(scotpho)){
-    la_name = scotpho[i, ]$area_name
-    highlight <- data[data$local_authority == la_name, ] 
-    plot(st_geometry(highlight), col = "orange", add=TRUE)
+```{r 'Test if colouring map works'}
+for(i in 1:nrow(df_scotpho)){
+    la_name = df_scotpho[i, ]$area_name
+    highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
+    plot(st_geometry(highlight), col = 'orange', add=TRUE)
 }
 ```
