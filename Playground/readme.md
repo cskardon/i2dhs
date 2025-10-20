@@ -12,3 +12,7 @@ GeoJSON from Spatial Hub Improvement Service https://data.spatialhub.scot/datase
 * License: [UK Open Government Licence (OGL)](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)
 * Metadata Created: 2021-06-11
 * Metadata Updated: 2023-06-20
+
+## Greenspace data
+
+From https://www.greenspacescotland.org.uk/statistics [Third State of Scotland's Greenspace Report](https://drive.google.com/open?id=1aQLMu60G5WRi4QKBCuZJ92oT8eM2sxd3) Appendix 6.4
