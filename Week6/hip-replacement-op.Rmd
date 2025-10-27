@@ -1,0 +1,100 @@
+---
+title: "hip_replacement_operations"
+author: "D Blana"
+date: "17/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aim 
+Plot 'EQ-5D Index' scores (a combination of five key criteria concerning patients' self-reported general health) pre and post a hip replacement operation for different age groups.
+
+## Load packages
+We only need the tidyverse for this exercise.
+
+```{r load-packages}
+library(tidyverse)
+```
+
+## Read in data
+The data is in the file "Hip Replacement CCG 1819.csv", and it contains patient reported outcomes for hip replacement procedures, from April 2018 to March 2019. It was downloaded from https://digital.nhs.uk/data-and-information/publications/statistical/patient-reported-outcome-measures-proms/for-hip-and-knee-replacement-procedures-april-2018-to-march-2019
+We also have the data dictionary for this dataset in "proms_data_dictionary.pdf".
+
+```{r read-data}
+hip_data <- read_csv("Hip Replacement CCG 1819.csv")
+```
+
+## Prepare the data
+This includes three steps: inspecting the data, selecting only the variables we want, and dealing with missing values. (In more complicated projects we might also need to join datasets, change data types, etc.)
+
+```{r inspect-data}
+glimpse(hip_data)
+```
+
+### Select age and quality of life score pre and post operation
+
+```{r select-age-eq5d}
+age_EQ5D <- hip_data %>%
+  select(`Age Band`,`Pre-Op Q EQ5D Index`,`Post-Op Q EQ5D Index`) %>%
+  rename(Age  = `Age Band`,
+         EQ5D_Pre = `Pre-Op Q EQ5D Index`,
+         EQ5D_Post = `Post-Op Q EQ5D Index`
+         )
+
+head(age_EQ5D)
+```
+
+### Identify and remove missing values
+
+```{r missing-values}
+age_EQ5D$Age %>% unique()
+age_EQ5D$Age %>% table()
+age_EQ5D %>% summary()
+
+age_EQ5D_noNA <- age_EQ5D %>%
+  drop_na() %>%
+  filter(Age !='*')
+
+table(age_EQ5D_noNA$Age)
+summary(age_EQ5D_noNA)
+```
+
+### Check that data is tidy
+The data frame is not tidy, because the column names EQ5D_Pre and EQ5D_Post contain *data*: the time point when EQ5D was measured: pre or post operation.  
+
+```{r tidy-data}
+head(age_EQ5D_noNA)
+
+tidy_age_EQ5D_noNA <- age_EQ5D_noNA %>%
+  pivot_longer(c(EQ5D_Pre,EQ5D_Post),
+               names_to = 'Time',   # the name of the column to create from the data stored in the original column names
+               names_prefix = 'EQ5D_',  # remove this text from the start of each variable name
+               values_to = 'EQ5D' # the name of the column to create from the data stored in cell values
+               )
+
+head(tidy_age_EQ5D_noNA)
+  
+```
+
+
+## Plot quality of life pre and post operation for each age group
+
+```{r plot-eq5d}
+
+# Turn Time into a "factor" so we can order the categories any way we want
+# otherwise they are alphabetical and "Post" ends up before "Pre"
+tidy_age_EQ5D_noNA$Time <- factor(tidy_age_EQ5D_noNA$Time,levels=c('Pre','Post'))
+
+# ggplot creates a blank canvas, to which we add a boxplot with "geom_boxplot"
+tidy_age_EQ5D_noNA %>%
+  ggplot() +
+  geom_boxplot(aes(x = Time, y = EQ5D, colour = Age))
+```
+
+
+
+
+

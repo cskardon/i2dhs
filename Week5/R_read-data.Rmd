@@ -5,9 +5,15 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# echo outputs the 'text' of the code - i.e. you're echoing the commands, not just the output 
 ```
 
 This guide is partly based on online material from Amy Willis, Kiirsti Owen and Amelia McNamara, and the book "R for Data Science" by Hadley Wickham and Garrett Grolemund. Thank you amazing R community!
+
+```{r install, eval=FALSE}
+# renv::install("tidyverse")
+#install.packages("tidyverse")
+```
 
 
 ### R as a calculator
