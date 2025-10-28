@@ -37,7 +37,7 @@ glimpse(hip_data)
 ### Select age and quality of life score pre and post operation
 
 ```{r select-age-eq5d}
-age_EQ5D <- hip_data %>%
+age_EQ5D <- hip_data |>
   select(`Age Band`,`Pre-Op Q EQ5D Index`,`Post-Op Q EQ5D Index`) %>%
   rename(Age  = `Age Band`,
          EQ5D_Pre = `Pre-Op Q EQ5D Index`,
@@ -69,7 +69,7 @@ The data frame is not tidy, because the column names EQ5D_Pre and EQ5D_Post cont
 head(age_EQ5D_noNA)
 
 tidy_age_EQ5D_noNA <- age_EQ5D_noNA %>%
-  pivot_longer(c(EQ5D_Pre,EQ5D_Post),
+  pivot_longer(c(EQ5D_Pre,EQ5D_Post), #list of  the columns we want to change
                names_to = 'Time',   # the name of the column to create from the data stored in the original column names
                names_prefix = 'EQ5D_',  # remove this text from the start of each variable name
                values_to = 'EQ5D' # the name of the column to create from the data stored in cell values
