@@ -1,0 +1,156 @@
+---
+title: "Pulling out the data for week 6"
+author: "Charlotte Skardon"
+date: "`r Sys.Date()`"
+output: pdf
+---
+
+# aim
+
+1. Plot 'EQ-5D Index' scores pre and post operation for each gender
+
+2. Calculate how many patients in this dataset have been told by a doctor that they have problems caused by a stroke
+
+3. Create a clean and tidy table with pre and post operation activity levels
+
+# load libraries
+
+```{r "Import Libraries"}
+library(tidyverse)
+```
+
+# read in data
+
+```{r "Read CSV"}
+hip_replacement_ccg_1819 <- read_csv('./Hip Replacement CCG 1819.csv')
+```
+
+# Question 1 
+
+> Plot 'EQ-5D Index' scores pre and post operation for each gender
+
+## Filter Columns
+
+First we'll filter to the columns we want...
+
+```{r "filter first"}
+# Treat col names the same way you would in Cypher - use ` to delimit.
+hip_filtered <- hip_replacement_ccg_1819 |>
+    select(`Pre-Op Q EQ5D Index`,`Post-Op Q EQ5D Index`,`Gender`) |>
+    rename(
+        Pre = `Pre-Op Q EQ5D Index`, # and don't forget commas :D
+        Post = `Post-Op Q EQ5D Index`
+    )
+```
+
+## Remove Missing / NA
+
+```{r 'Remove Missing'}
+hip_filtered_nona <- hip_filtered |> 
+    drop_na() |> 
+    filter(`Gender` != '*')
+```
+
+## `Pivot_Longer` to standardise data
+
+```{r 'Pivot time!'}
+hip_gender_tidied = hip_filtered_nona |>
+    pivot_longer(
+        c(Pre, Post), 
+        names_to = 'Time',
+        values_to = 'EQ5D'
+    )
+
+```
+
+## Plot the data!
+
+```{r 'Plot 'EQ-5D Index' scores pre and post operation for each gender'}
+
+hip_gender_tidied$Time <- factor(hip_gender_tidied$Time,levels=c('Pre','Post'))
+
+hip_gender_tidied |>
+  ggplot() +
+  geom_boxplot(aes(x = Time, y = EQ5D, colour = Gender))
+
+```
+
+# Question 2 - Stroke count
+
+>Calculate how many patients in this dataset have been told by a doctor that they have problems caused by a stroke
+
+So - the question here is what is meant by _dataset_? Do we mean the one we've already filtered - e.g. `hip_gender_tidied`, _or_ do we mean from the general initial dataset?
+
+```{r "How many have been told there were stroke complications"}
+all_strokes = hip_replacement_ccg_1819 |>
+        select(`Stroke`) |> # technically - no need to do this, as filtering will do the job
+        filter(`Stroke` == '1') |>
+        count()
+
+all_strokes$n
+
+table(hip_replacement_ccg_1819 |>
+        select(`Stroke`) |> # technically - no need to do this, as filtering will do the job
+        filter(`Stroke` == '1'))
+
+hip_replacement_ccg_1819 |>
+    select(`Stroke`) |> 
+    filter(`Stroke` == '1') |> 
+    summarise(n())
+
+hip_replacement_ccg_1819 |>
+    group_by(`Stroke`) |> 
+    summarise(n())
+
+table(hip_replacement_ccg_1819$Stroke)
+```
+
+
+# Question 3 - Pre/Post Op Activity Levels
+
+> Create a clean and tidy table with pre and post operation activity levels
+
+```{r "filter first"}
+# Treat col names the same way you would in Cypher - use ` to delimit.
+activity_filtered <- hip_replacement_ccg_1819 |>
+    select(`Pre-Op Q Activity`,`Post-Op Q Activity`) |>
+    rename(
+        Pre = `Pre-Op Q Activity`, # and don't forget commas :D
+        Post = `Post-Op Q Activity`
+    )
+```
+
+## Remove Missing / NA
+
+Question here is - to remove `9` as that represents a missing value?
+
+```{r 'Remove Missing'}
+activity_filtered_nona <- activity_filtered |> 
+    drop_na() |>
+    filter(Pre != 9) |>
+    filter(Post != 9)
+```
+
+## `Pivot_Longer` to standardise data
+
+```{r 'Pivot time!'}
+activity_gender_tidied = activity_filtered_nona |>
+    pivot_longer(
+        c(Pre, Post), 
+        names_to = 'Time',
+        values_to = 'EQ5D'
+    )
+
+```
+
+## Plot - but not much point...
+
+```{r 'Plot 'EQ-5D Index' scores pre and post operation for each gender'}
+
+activity_gender_tidied$Time <- factor(activity_gender_tidied$Time,levels=c('Pre','Post'))
+
+activity_gender_tidied |>
+  ggplot() +
+  geom_boxplot(aes(x = Time, y = EQ5D))
+
+```
