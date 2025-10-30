@@ -266,17 +266,36 @@ table(fev_data$age)
 table(fev_data$age,fev_data$smoke)
 ```
 
-
-
 --> **Problem 1**: Which subjects are male and which are female? (i.e. what does sex == 1 mean?)
 
+There's no data dictioanry to answer which is which, so just grouping / splitting by `sex`
+
 ```{r}
-# Add your code here!
+fev_gendered <- fev_data |> 
+  group_by(sex) 
+
+summarise(fev_gendered, n())
+
+fev_1 <- fev_data |>
+  filter(sex == 1)
+
+fev_1
+
+fev_0 <- fev_data |>
+  filter(sex == 0)
+
+fev_0
 ```
+
 --> **Problem 2**: Why do smokers appear to have better lung function (higher forced expiratory volume - FEV)?
 
 ```{r}
-# Add your code here!
+# mean of FEV for smokers, mean of FEV for non smokers
+
+fev_smokes <- fev_data |> 
+  group_by(smoke)
+
+summarise(fev_smokes, mean(fev), n())
 ```
 
 Useful function: rename
