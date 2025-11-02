@@ -1,0 +1,148 @@
+---
+title: "alcohol-related-admissions"
+author: "D Blana"
+date: "17/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+
+We just need the tidyverse package.
+
+```{r load-packages}
+library(tidyverse)
+```
+
+## Read in data
+Our data is saved in csv files, so we will use the read_csv function.
+
+```{r read-data}
+# alcohol-related hospital admissions
+data <- read_csv("scotpho_data_extract.csv") 
+
+# intermediate data zone info
+intermediate_zone_codes <- read_csv("iz2011_codes_and_labels_21042020.csv") 
+
+```
+
+
+## Prepare data
+The data in these open datasets is already clean, so we don't need to worry about missing or wrong values. It is also tidy. 
+We will only select the data we want: data from intermediate zones, and a subset of the variables from each dataset.
+
+```{r}
+glimpse(data)
+
+iz_data <- data %>%
+  filter(area_type == "Intermediate zone") %>%
+  select(area_name,area_code,year,measure)
+
+glimpse(intermediate_zone_codes)
+
+iz_info <- intermediate_zone_codes %>%
+  select(IntZone,HBName)
+
+```
+
+## Join the datasets
+Let's join the two datasets, so we know which health board each data zone belongs to.
+We will also remove "NHS" from the health board name, and rename a couple of the columns.
+
+```{r join-datasets}
+admission_data <- left_join(iz_data,iz_info, by = c("area_code" = "IntZone"))
+
+glimpse(admission_data)
+
+admission_data <- admission_data %>%
+  mutate(HBName = gsub("NHS ", "", HBName)) %>%
+  rename(health_board = HBName,
+         alcohol_admissions = measure)
+
+glimpse(admission_data)
+```
+
+## Save dataframe
+To save the dataframe to a CSV file, we use the write_csv function.
+
+```{r save-data}
+write_csv(admission_data,"alcohol_related_admissions.csv")
+
+```
+
+## Let's compare Grampian and Fife data in 2019
+
+We will use histograms, Q-Q plots and boxplots, before doing a statistical comparison.
+
+```{r compare-Grampian-Fife}
+
+grampian_fife_data <- admission_data %>%                          
+  filter(year == 2019,      # only 2019
+         health_board %in% c("Grampian", "Fife"))  # only Grampian and Fife
+
+#histogram
+grampian_fife_data %>%                         
+  ggplot(aes(x = alcohol_admissions)) + 
+  geom_histogram(bins = 15) +
+  facet_wrap(~health_board)
+
+# Q-Q plot
+grampian_fife_data %>%                          
+  ggplot(aes(sample = alcohol_admissions)) +          
+  geom_qq() + 
+  geom_qq_line(colour = "blue") + 
+  facet_wrap(~health_board)
+
+# boxplot
+grampian_fife_data %>%                          
+  ggplot(aes(x = health_board,             
+             y = alcohol_admissions)) +    
+  geom_boxplot() +                        
+  geom_jitter(alpha = 0.4) +               # add data points
+  theme(legend.position = "none")          # remove legend
+
+
+```
+
+## Statistical comparison
+Non-parametric test
+
+```{r wilcox-test}
+wilcox.test(alcohol_admissions ~ health_board, data = grampian_fife_data)
+
+```
+```{r kruskal-test}
+# non-parametric test for comparing more than two groups
+admission_data %>% 
+  filter(year == 2019,
+         health_board %in% c("Grampian", "Fife", "Lothian")) %>% 
+  kruskal.test(alcohol_admissions~health_board, data = .)
+
+```
+
+## Transformation to normal
+
+```{r log-transform}
+
+Grampian2019 <- admission_data %>%     # save as Grampian2019
+  filter(year == 2019,            # only 2019
+         health_board == "Grampian") %>%     # only Grampian
+  mutate(alcohol_admissions_log = log(alcohol_admissions))         # log hospital admissions
+
+Grampian2019 %>% 
+  ggplot(aes(x = alcohol_admissions)) +             
+  geom_histogram(bins = 15) +           # make histogram
+  ggtitle("Grampian alcohol-related hospital admissions in 2019") # add title
+
+Grampian2019 %>% 
+  ggplot(aes(x = alcohol_admissions_log)) +             
+  geom_histogram(bins = 15) +           # make histogram
+  ggtitle("Log of Grampian alcohol-related hospital admissions in 2019") # add title
+
+
+```
+
+

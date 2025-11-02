@@ -33,6 +33,8 @@ hip_replacement_ccg_1819 <- read_csv('./Hip Replacement CCG 1819.csv')
 
 First we'll filter to the columns we want...
 
+_Can use `colnames(hip_filtered)` to get the list of cols_
+
 ```{r "filter first"}
 # Treat col names the same way you would in Cypher - use ` to delimit.
 hip_filtered <- hip_replacement_ccg_1819 |>
@@ -141,6 +143,7 @@ activity_gender_tidied = activity_filtered_nona |>
         values_to = 'EQ5D'
     )
 
+activity_gender_tidied
 ```
 
 ## Plot - but not much point...
