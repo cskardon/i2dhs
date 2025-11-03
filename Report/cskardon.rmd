@@ -1,0 +1,49 @@
+# 
+
+I want to investigate how the population prescribed drugs for anxiety, depression and psychosis vary geographically and how they have changed over a 10-year period at the Scottish national and local authority level.
+
+1.	What are the rates of prescriptions at a national level?
+2.	Are there differences in prescriptions between local authorities?
+3.	If they have changed, how have they have changed over the ten years at a national level?
+4.	If they have changed, how have they have changed over ten years between local authorities?
+
+## Libraries
+
+```{r "Import Libraries"}
+library("tidyverse")
+```
+
+## Read in data files
+
+Local and national data from the The Scottish Public Health Observatory (ScotPHO) Online Profiles Tool (2025) website. Available at: https://scotland.shinyapps.io/ScotPHO_profiles_tool/ (Accessed: 03 November 2025).
+
+```{r}
+all_data <- read_csv('./data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv')
+```
+
+## Tidy the data
+
+
+```{r}
+national_data <- all_data |> 
+    filter(quintile == "Total" & area_type=="Scotland") |> 
+    select(c("year", "value"))    
+
+local_authority_data <- all_data |>
+    filter(quintile == "Total" & area_type=="Council area") |> 
+    select(c("year", "area_name", "value"))
+```
+
+
+```{r}
+national_data |> 
+    ggplot(aes(x=year, y=value)) +
+    geom_path()
+```
+
+
+```{r}
+local_authority_data |> 
+    ggplot(aes(x=year, y=value, color=area_name)) +
+    geom_path()
+```
