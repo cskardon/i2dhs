@@ -20,11 +20,11 @@ plot(map_scotland_la_boundary$geometry, col = 'grey')
 ```
 
 ```{r 'Highlight one authority'}
-local_authority = 'Dumfries and Galloway'
-map_local_authority_highlight = map_scotland_la_boundary[map_scotland_la_boundary$local_authority == local_authority, ] 
+# local_authority = 'Dumfries and Galloway'
+# map_local_authority_highlight = map_scotland_la_boundary[map_scotland_la_boundary$local_authority == local_authority, ] 
 
-#NB. add=TRUE allows the above plot to be augmented with the highlighting, as opposed to plotting afresh.
-plot(st_geometry(map_local_authority_highlight), col = 'red', add=TRUE)
+# #NB. add=TRUE allows the above plot to be augmented with the highlighting, as opposed to plotting afresh.
+# plot(st_geometry(map_local_authority_highlight), col = 'red', add=TRUE)
 ```
 
 Reading in the CSV file with the local authorities in.
@@ -48,9 +48,52 @@ df_scotpho = tidy_names_of_scotpho_la_for_maps(df_scotpho)
 If all the naming of the local authorites in the DataFrame is now correct - then the entire map should be coloured in orange.
 
 ```{r 'Test if colouring map works'}
-for(i in 1:nrow(df_scotpho)){
-    la_name = df_scotpho[i, ]$area_name
+# for(i in 1:nrow(df_scotpho)){
+#     la_name = df_scotpho[i, ]$area_name
+#     highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
+#     plot(st_geometry(highlight), col = '#443322AA', add=TRUE)
+# }
+```
+
+
+So there are 32 LAs
+
+
+```{r}
+# Only pulling 2018 for this as that's all the data we have
+df_scotpho_totals <- df_scotpho |> 
+    filter(year == 2018) |> 
+    select(`area_name`, `measure`)
+
+min_measure = min(df_scotpho_totals$measure) # This is the minimum % measurement in the data
+max_measure = max(df_scotpho_totals$measure) # This is the max ^^
+diff_measure = max_measure - min_measure # This gets the difference between min and max - so we can...
+
+# Calculate the 'alpha' (opacity) value of colours per '.1' percent.
+# The data is rounded to 1dp, so we do (diff_measure * 10) to remove the dp
+# We divide 1 by ^ because 1 is 'full' opacity (i.e. opaque).
+alpha_step = 1 / (diff_measure * 10) 
+```
+
+Alpha will essentially become:
+`diff from min value * alpha_step`
+
+We'll use black (i.e. `RGB(0,0,0, calc_alpha)`) to render the colours, so I need to mutate the df
+
+
+```{r}
+df_scotpho_withcolour <- df_scotpho_totals
+
+# df_scotpho_withcolour$colour <- rgb(0,1,0, ((df_scotpho_withcolour$measure - min_measure) * 10) * alpha_step)
+df_scotpho_withcolour$colour <- rgb(0,((df_scotpho_withcolour$measure - min_measure) * 10) * alpha_step, 1, 1)
+# df_scotpho_withcolour$colour <- rgb(0,1,0, ((df_scotpho_withcolour$measure - min_measure) * 10) * alpha_step)
+```
+
+
+```{r}
+for(i in 1:nrow(df_scotpho_withcolour)){
+    la_name = df_scotpho_withcolour[i, ]$area_name
     highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
-    plot(st_geometry(highlight), col = 'orange', add=TRUE)
+    plot(st_geometry(highlight), col = df_scotpho_withcolour[i, ]$colour, add=TRUE)
 }
 ```

@@ -9,7 +9,7 @@ library("tidyverse")
 
 # Read in Data
 ```{r}
-data <- read_csv('./Data/scotpho_data_extract.csv')
+data <- readr::read_csv('./Data/scotpho_data_extract.csv')
 intermediate_zone_codes <- read_csv('./Data/iz2011_codes_and_labels_21042020.csv')
 ```
 
