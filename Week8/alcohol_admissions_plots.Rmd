@@ -1,0 +1,281 @@
+---
+title: "alcohol-admission-plots"
+author: "D Blana"
+date: "17/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+
+```{r load-packages}
+
+library(tidyverse)
+library(viridis)   # nice colour scheme
+library(patchwork) # great for combining plots
+library(plotly)    # interactive visualisations
+
+```
+
+## Read in data
+
+```{r read-data}
+
+admission_data <- read_csv("alcohol_related_admissions.csv") 
+glimpse(admission_data)
+
+```
+
+## Create boxplot of alcohol-related hospital admissions for each health board in 2019
+
+First, with default settings.
+
+```{r plot-data-default}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  ggplot(aes(x = health_board, 
+             y = alcohol_admissions)) +
+  geom_boxplot()
+
+```
+
+Let's make the figure wider by changing the fig.width in the chunk header.
+
+```{r plot-data-wider, fig.width = 10}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  ggplot(aes(x = health_board, 
+             y = alcohol_admissions)) +
+  geom_boxplot()
+
+```
+
+The health board names still don't fit, so let's make them wrap.
+
+```{r plot-data-wrap, fig.width = 10}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  ggplot(aes(x = str_wrap(health_board, 10), 
+             y = alcohol_admissions)) +
+  geom_boxplot()
+
+```
+
+Let's add labels and a title.
+
+```{r plot-data-labels, fig.width = 10}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  ggplot(aes(x = str_wrap(health_board, 10), 
+             y = alcohol_admissions)) +
+  geom_boxplot() +
+  xlab(NULL) +                                               # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +            # label y-axis
+  ggtitle("Alcohol-related hospital admissions in 2019")     # add title
+
+```
+
+Let's make Grampian stand out by making it a different colour. For this, we will create a new variable (with "mutate") called "isGrampian" which is "yes" for the rows that belong to Grampian, and "no" for the rows that don't. We use "ifelse" for this. Then, we can use this new variable to colour (fill in) the boxplots. 
+
+```{r plot-data-Grampian, fig.width = 10}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  mutate(isGrampian=ifelse(health_board=="Grampian","yes","no")) %>%
+  ggplot(aes(x = str_wrap(health_board, 10), 
+             y = alcohol_admissions,
+             fill=isGrampian)) +
+  geom_boxplot() +
+  xlab(NULL) +                                               # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +            # label y-axis
+  ggtitle("Alcohol-related hospital admissions in 2019")     # add title
+
+```
+
+Let's remove the legend and change the colour scheme to Viridis.
+
+```{r plot-data-viridis, fig.width = 10}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  mutate(isGrampian=ifelse(health_board=="Grampian","yes","no")) %>%
+  ggplot(aes(x = str_wrap(health_board, 10), 
+             y = alcohol_admissions,
+             fill=isGrampian)) +
+  geom_boxplot() +
+  xlab(NULL) +                                                 # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions in 2019") +     # add title
+  scale_fill_viridis(discrete=TRUE) +                          # use the viridis colour scheme
+  theme(legend.position = "none")                              # remove the legend  
+
+```
+
+Let's invert the colours by adding "direction = -1", remove the grey background, and make the colours transparent (alpha = 0) so we can see the Grampian median better. 
+
+```{r plot-data-finalcolours, fig.width = 10}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  mutate(isGrampian=ifelse(health_board=="Grampian","yes","no")) %>%
+  ggplot(aes(x = str_wrap(health_board, 10), 
+             y = alcohol_admissions,
+             fill=isGrampian,
+             alpha=0))+
+  geom_boxplot() +
+  xlab(NULL) +                                                 # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions in 2019") +     # add title
+  scale_fill_viridis(discrete=TRUE,direction = -1) +           # use the viridis colour scheme
+  theme_bw() +                                                 # white background
+  theme(legend.position = "none")                              # remove the legend  
+                                                     
+```
+
+Now let's reorder the boxplots, according to the median value of the alcohol_admissions.
+
+```{r plot-data-reorder, fig.width = 10}
+
+admission_data %>% 
+  filter(year == 2019) %>%
+  mutate(isGrampian=ifelse(health_board=="Grampian","yes","no")) %>%
+  ggplot(aes(x = reorder(str_wrap(health_board, 10),alcohol_admissions, FUN = median), 
+             y = alcohol_admissions,
+             fill=isGrampian,
+             alpha=0))+
+  geom_boxplot() +
+  xlab(NULL) +                                                 # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions in 2019") +     # add title
+  scale_fill_viridis(discrete=TRUE,direction = -1) +           # use the viridis colour scheme
+  theme_bw() +                                                 # white background
+  theme(legend.position = "none")                              # remove the legend  
+
+```
+
+To combine two plots, we save them into objects p1 and p2, and place them on top of each other with p1 / p2. (pi + p2 would place them next to each other). For this we use the pathwork package.
+
+```{r plot-data-2014-19, fig.width = 10}
+
+p1 <- admission_data %>% 
+  filter(year == 2014) %>%
+  mutate(isGrampian=ifelse(health_board=="Grampian","yes","no")) %>%
+  ggplot(aes(x = reorder(str_wrap(health_board, 10),alcohol_admissions, FUN = median), 
+             y = alcohol_admissions, 
+             fill=isGrampian,
+             alpha=0))+
+  geom_boxplot()+
+  xlab(NULL)+                                               # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +           # label y-axis
+  ggtitle("Alcohol-related hospital admissions in 2014")+   # add title
+  scale_fill_viridis(discrete=TRUE,direction = -1)+         # use the viridis colour scheme
+  theme_bw() +                                              # white background
+  theme(legend.position = "none")                           # remove the legend
+
+
+p2 <- admission_data %>% 
+  filter(year == 2019) %>%
+  mutate(isGrampian=ifelse(health_board=="Grampian","yes","no")) %>%
+  ggplot(aes(x = reorder(str_wrap(health_board, 10),alcohol_admissions, FUN = median), 
+             y = alcohol_admissions, 
+             fill=isGrampian,
+             alpha=0))+
+  geom_boxplot()+
+  xlab(NULL)+                                               # remove x-axis label
+  ggtitle("Alcohol-related hospital admissions in 2019")+   # add title
+  scale_fill_viridis(discrete=TRUE,direction = -1)+         # use the viridis colour scheme
+  theme_bw() +                                              # white background
+  theme(legend.position = "none")                           # remove the legend
+
+p1 / p2
+
+```
+
+## Median Grampian admissions
+
+Here we calculate the median admissions in Grampian for each year, using "group_by". 
+
+```{r median-Grampian}
+
+median_Grampian_admissions <- admission_data %>%
+  filter(health_board == "Grampian") %>%
+  group_by(year) %>%
+  summarise(median_admissions = median(alcohol_admissions))
+
+head(median_Grampian_admissions)
+
+```
+
+Then we create a scatterplot using geom_point.
+
+```{r scatterplot}
+
+median_Grampian_admissions %>% 
+  ggplot(aes(x = year, y = median_admissions)) +       
+  geom_point()+
+  xlab(NULL)+                                                  # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions in Grampian") + # add title
+  theme_bw() 
+
+```
+
+We can specify where to place the ticks on the x axis using scale_x_continuous:
+
+```{r scatterplot-xaxis}
+
+median_Grampian_admissions %>% 
+  ggplot(aes(x = year, y = median_admissions)) +       
+  geom_point()+
+  scale_x_continuous(breaks = seq(2010, 2019, by=1) ) +
+  xlab(NULL)+                                                  # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions in Grampian") + # add title
+  theme_bw() 
+
+```
+
+We can fit a line to the points using geom_smooth, which by default includes a confidence interval. We remove this by setting se = FALSE.
+
+```{r linefit}
+
+median_Grampian_admissions %>% 
+  ggplot(aes(x = year, y = median_admissions)) +       
+  geom_point()+
+  geom_smooth(se = FALSE) +
+  scale_x_continuous(breaks = seq(2010, 2019, by=1) ) +
+  xlab(NULL)+                                                  # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions in Grampian") + # add title
+  theme_bw() 
+
+```
+
+Finally, we can add some interactivity to the graph using ggplotly, and specifying which values should show at the tooltip.
+
+```{r interactive}
+
+p <- median_Grampian_admissions %>% 
+  ggplot(aes(x = year, y = median_admissions)) +       
+  geom_point()+
+  geom_smooth(se = FALSE) +
+  scale_x_continuous(breaks = seq(2010, 2019, by=1) ) +
+  xlab(NULL)+                                                  # remove x-axis label
+  ylab("Age-sex standardised rate per 100,000") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions in Grampian") + # add title
+  theme_bw() 
+
+ggplotly(p,tooltip = c("x","y"))
+
+```
+
+
+
+

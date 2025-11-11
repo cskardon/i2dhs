@@ -1,0 +1,202 @@
+---
+title: "Plotting data"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This guide is partly based on online material from Amy Willis, Kiirsti Owen and Amelia McNamara, and the book "R for Data Science" by Hadley Wickham and Garrett Grolemund. Thank you amazing R community!
+
+### Load packages
+We will be using the readr, dplyr and ggplot2 packages from the Tidyverse family of packages. We will also load the "here" package that we will use to read in our data.
+
+```{r, message=FALSE,warning=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(here)
+```
+
+### Reading in the same data 
+
+Read in the data from file fev.csv and save it in an object called fev_data:
+
+```{r}
+fev_data <- read_csv(here("fev.csv"))
+
+```
+
+Tip: If you got an error that "fev.csv" does not exist, check that you are working in the correct directory!
+
+### Plotting
+
+The first step to using ggplot is creating a blank canvas:
+
+```{r}
+fev_data %>%
+  ggplot()   
+```
+
+
+### Scatterplots
+
+We add points using geom_point:
+
+```{r}
+fev_data %>%
+  ggplot() +
+  geom_point(aes(x = age, y = fev)) # aes stands for "aesthetic"
+```
+
+Add limits, labels, title:
+
+```{r}
+fev_data %>%
+  ggplot() +
+  geom_point(aes(x = age, y = fev)) +
+  ylim(0, 7) +
+  ylab("Forced exhalation\nvolume (litres)") +
+  ggtitle("Distribution of FEV")
+```
+
+We can change the colour of the points (colour - but you can also use col or color), the shape of the points (shape) and the size in mm (size):
+
+```{r}
+fev_data %>%
+  ggplot() +
+  geom_point(aes(x = age, y = fev), size = 0.5, shape = 18, colour = "blue")  # Shape 18 is filled diamond
+```
+
+Tip: Find out more about ggplot's aesthetic specifications here: https://cran.r-project.org/web/packages/ggplot2/vignettes/ggplot2-specs.html
+
+To colour by sex, we add the variable as aesthetic elements:
+
+```{r}
+fev_data %>%
+  mutate(sex = as.character(sex)) %>% # change sex from continuous to categorical variable
+  ggplot() +
+  geom_point(aes(x = age, y = fev, colour = sex))
+```
+
+Add a smooth line fitted to the data:
+
+```{r}
+fev_data %>%
+  mutate(sex = as.character(sex)) %>%
+  ggplot() +
+  geom_point(aes(x = age, y = fev, colour = sex)) +
+  geom_smooth(aes(x = age, y = fev))
+```
+
+One smooth line per sex:
+
+```{r}
+fev_data %>%
+  mutate(sex = as.character(sex)) %>%
+  ggplot() +
+  geom_point(aes(x = age, y = fev, colour = sex)) +
+  geom_smooth(aes(x = age, y = fev, colour = sex))
+```
+
+If all our geometric objects (geoms) have the same aesthetic mappings, we can add these to the main ggplot function instead of repeating them for each geom. So this is the same as the previous graph:
+
+```{r}
+fev_data %>%
+  mutate(sex = as.character(sex)) %>%
+  ggplot(aes(x = age, y = fev, colour = sex)) +
+  geom_point() +
+  geom_smooth()
+
+```
+
+
+### Line plots
+
+This is not quite right:
+
+```{r}
+fev_data %>%
+  group_by(age, smoke) %>%
+  summarise(fev_mean = mean(fev)) %>%
+  ggplot() +
+  geom_line(aes(x = age, y = fev_mean, colour = smoke))  # smoke is a continuous numeric variable!
+```
+
+This is better :)
+
+```{r}
+fev_data %>%
+  group_by(age, smoke) %>%
+  summarise(fev_mean = mean(fev)) %>%
+  mutate(smoke = as.character(smoke)) %>%
+  ggplot() +
+  geom_line(aes(x = age, y = fev_mean, colour = smoke))
+```
+
+
+### Bar plots
+
+How many subjects smoke?
+
+```{r}
+fev_data %>%
+  mutate(smoke = as.character(smoke)) %>%
+  ggplot() + 
+  geom_bar(aes(x = smoke))  # by default, the y variable is the count of the x (in this case, number of smokers)
+
+```
+
+How many men and how many women smoke / don't smoke?
+
+```{r}
+fev_count <- fev_data %>%
+  group_by(sex, smoke) %>%
+  summarise(smoke_count = n())
+```
+
+It might be easier to replace 0 and 1 with meaningful words...
+
+```{r}
+fev_count <- fev_data %>%
+  mutate(Smoke = ifelse(smoke == 1, "Smoker", "Non-smoker"),
+         Sex = ifelse(sex == 1, "Male", "Female")) %>%
+  group_by(Sex, Smoke) %>%
+  summarise(Count = n())
+
+fev_count %>%
+  ggplot(aes(x = Smoke, y = Count, fill = Sex)) + 
+  geom_bar(stat = "identity",     # "identity" allows us to specify a y variable, otherwise it is count (as above)
+           position = "dodge") +  # Put bars side-by-side instead of stacked
+  scale_fill_brewer(palette="Spectral")
+```
+
+Tip: Find out much more about colours in ggplot here: http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/
+
+
+### Box plots
+
+```{r}
+fev_data %>%
+  filter(age < 18 & age > 9) %>%
+  mutate(smoke = as.character(smoke),
+         age = as.character(age)) %>%
+  ggplot() +
+  geom_boxplot(aes(x = age, y = fev, colour = smoke)) + 
+  theme_bw()
+```
+
+
+### Saving plots
+
+```{r}
+ggsave("age_vs_fev.pdf")
+```
+
+To change the size:
+
+```{r}
+ggsave("age_vs_fev.pdf", width=10, height=5)
+```
+

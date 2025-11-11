@@ -1,0 +1,208 @@
+---
+title: "practice-with-plots"
+author: "D Blana"
+date: "17/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+
+```{r load-packages}
+
+library(tidyverse)
+library(viridis)   # nice colour scheme
+library(plotly)    # interactive visualisations
+
+```
+
+## Read in the data
+
+```{r read-data}
+
+admission_data <- read_csv("alcohol_related_admissions.csv") 
+glimpse(admission_data)
+
+```
+
+## Median admissions
+
+Here we calculate the median admissions for each health board and each year, using "group_by". 
+
+```{r median-admissions}
+
+median_admissions <- admission_data %>%
+  group_by(year, health_board) %>%
+  summarise(median_admissions = median(alcohol_admissions))
+
+head(median_admissions)
+
+```
+
+## Simple bar chart
+
+You can read a lot more about bar plots here: https://www.r-graph-gallery.com/barplot.html
+
+```{r bar-chart}
+
+median_admissions %>%
+  filter(year == 2019) %>%
+  rename(alcohol_admissions = median_admissions) %>%
+  ggplot(aes(x=health_board, y=alcohol_admissions)) + 
+  geom_bar(stat = "identity")
+
+```
+
+Instead of wrapping the names, let's make the graph horizontal instead using "coord_flip". Also add labels and a title.
+
+```{r bar-horizontal}
+
+median_admissions %>%
+  filter(year == 2019) %>%
+  rename(alcohol_admissions = median_admissions) %>%
+  ggplot(aes(x=health_board, y=alcohol_admissions)) + 
+  geom_bar(stat = "identity") +
+  coord_flip() +                         
+  xlab(NULL) + 
+  ylab("Age-sex standardised rate per 100,000") + 
+  ggtitle("Alcohol-related hospital admissions in 2019") 
+
+```
+
+Let's also reorder them by size.
+
+```{r bar-reorder}
+
+median_admissions %>%
+  filter(year == 2019) %>%
+  rename(alcohol_admissions = median_admissions) %>%
+  ggplot(aes(x=reorder(health_board,alcohol_admissions), y=alcohol_admissions)) + 
+  geom_bar(stat = "identity") +
+  coord_flip() + 
+  xlab(NULL) + 
+  ylab("Age-sex standardised rate per 100,000") + 
+  ggtitle("Alcohol-related hospital admissions in 2019") 
+
+```
+
+Exercise 1: Could you make Grampian stand out by giving it a different colour?
+
+Add your code here!
+
+
+
+
+Let's make a lollipop graph instead.(https://www.r-graph-gallery.com/lollipop-plot.html) 
+
+```{r lollipop}
+
+median_admissions %>%
+  filter(year == 2019) %>%
+  rename(alcohol_admissions = median_admissions) %>%
+  ggplot(aes(x=reorder(health_board,alcohol_admissions), 
+             y=alcohol_admissions)) + 
+  geom_segment(aes(xend=health_board, y=0, yend=alcohol_admissions)) +
+  geom_point(size=4, alpha=0.6) +
+  coord_flip() + 
+  xlab(NULL) + 
+  ylab("Age-sex standardised rate per 100,000") + 
+  ggtitle("Alcohol-related hospital admissions in 2019") + 
+  theme_bw() 
+
+```
+
+Bar chart with two groups, for years 2010 and 2019
+
+```{r grouped2-barchart}
+
+median_admissions %>%
+  filter(year %in% c(2010, 2019)) %>%   # only select these two years
+  mutate(year = as.factor(year)) %>%          # convert years to categories ("factors")
+  rename(alcohol_admissions = median_admissions) %>%
+  ggplot(aes(x=health_board,
+         y=alcohol_admissions,
+         fill = year)) +
+  geom_bar(position="dodge", stat = "identity") +  # without "dodge", we get a stacked bar chart
+  coord_flip() + 
+  xlab(NULL) + 
+  ylab("Age-sex standardised rate per 100,000") + 
+  ggtitle("Alcohol-related hospital admissions") + 
+  theme_bw()  
+
+```
+
+Exercise 2: Now try making a bar chart with three groups three years 2010, 2015 and 2019.
+Could you also improve the colours by using a different colour scheme?
+
+(Hint: viridis includes a few different scales, which you can set using the "option" parameter in scale_fill_viridis, run ?scale_fill_viridis to see all options.You may also want to add a "begin" or "end" parameter, to make sure the lightest colour is not so light it's not visible against the white background.)
+
+Add your code here!
+
+
+
+## Is there a relationship between alcohol-related hospital admissions and deprivation?
+
+Let's load the second dataset, "simd20_2019.csv". This contains population estimates for each SIMD decile per health board in Scotland for 2019. It came from here: https://www.nrscotland.gov.uk/statistics-and-data/statistics/statistics-by-theme/population/population-estimates/2011-based-special-area-population-estimates/population-estimates-by-simd-2016
+
+```{r read-deprivation-data}
+
+deprivation_data <- read_csv("simd20_2019.csv") 
+glimpse(deprivation_data)
+
+```
+
+Let's calculate the percent of the population in the most deprived areas (SIMD deciles 1-3) in each health board.
+
+In the code below, we use first mutate & sum and then summarise & sum to calculate the sum of a column. The difference is that mutate adds a column to the existing dataframe, while summarise creates a new aggregate dataframe. Read more about this here: https://argoshare.is.ed.ac.uk/healthyr_book/summarise-vs-mutate.html 
+
+```{r percent-pop-simd}
+
+# Calculate total population per health board, and population per SIMD decile, then divide to get the percent of the population at each SIMD decile
+
+deprivation_data <- deprivation_data %>%
+  group_by(`NHS health board`) %>%
+  mutate(Total_population = sum(Population),
+         Percent_population = Population/Total_population) %>%   # here we are adding new columns to the original dataframe
+  ungroup()
+
+# We can now keep SIMD = 1-3
+
+deprived_ratio <- deprivation_data %>%
+  filter(`SIMD decile` <= 3) %>%
+  group_by(`NHS health board`) %>%
+  summarise(percent_deprived = sum(Percent_population))  # here we are creating a new "summary" dataframe
+
+```
+
+Exercise 3: Link this dataset to median_admissions for 2019. (Remember to only keep the median alcohol admission data for the year 2019.)
+
+Add your code here!
+
+
+
+
+Exercise 4: Now create a scatterplot looking at the relationship between percent deprived and alcohol-related hospital admissions.
+
+Add your code here!
+
+
+
+
+Possible improvements:
+
+1. Add text (https://ggplot2.tidyverse.org/reference/geom_text.html)
+
+2. Make your visualisation interactive
+
+3. Turn it into a bubble plot, using the total population of each health board for the circle size (https://www.r-graph-gallery.com/320-the-basis-of-bubble-plot.html). You will need to add the total population of each health board to the dataframe.
+
+
+
+
+
+
+
+
