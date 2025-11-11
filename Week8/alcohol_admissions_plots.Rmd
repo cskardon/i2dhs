@@ -24,7 +24,7 @@ library(plotly)    # interactive visualisations
 
 ```{r read-data}
 
-admission_data <- read_csv("alcohol_related_admissions.csv") 
+admission_data <- read_csv("data/alcohol_related_admissions.csv") 
 glimpse(admission_data)
 
 ```
@@ -146,7 +146,7 @@ Now let's reorder the boxplots, according to the median value of the alcohol_adm
 admission_data %>% 
   filter(year == 2019) %>%
   mutate(isGrampian=ifelse(health_board=="Grampian","yes","no")) %>%
-  ggplot(aes(x = reorder(str_wrap(health_board, 10),alcohol_admissions, FUN = median), 
+  ggplot(aes(x = reorder(str_wrap(health_board, 10),alcohol_admissions, FUN = median), #median bit here
              y = alcohol_admissions,
              fill=isGrampian,
              alpha=0))+

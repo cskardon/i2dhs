@@ -24,7 +24,7 @@ library(here)
 Read in the data from file fev.csv and save it in an object called fev_data:
 
 ```{r}
-fev_data <- read_csv(here("fev.csv"))
+fev_data <- read_csv(here("data/fev.csv"))
 
 ```
 
@@ -142,7 +142,7 @@ How many subjects smoke?
 
 ```{r}
 fev_data %>%
-  mutate(smoke = as.character(smoke)) %>%
+  mutate(smoke = as.character(smoke)) %>% #Or as.logical
   ggplot() + 
   geom_bar(aes(x = smoke))  # by default, the y variable is the count of the x (in this case, number of smokers)
 
@@ -160,7 +160,7 @@ It might be easier to replace 0 and 1 with meaningful words...
 
 ```{r}
 fev_count <- fev_data %>%
-  mutate(Smoke = ifelse(smoke == 1, "Smoker", "Non-smoker"),
+  mutate(Smoke = ifelse(smoke == 1, "Smoker", "Non-smoker"), #no need to do the == 1 bit as 1 is coerced into TRUE
          Sex = ifelse(sex == 1, "Male", "Female")) %>%
   group_by(Sex, Smoke) %>%
   summarise(Count = n())

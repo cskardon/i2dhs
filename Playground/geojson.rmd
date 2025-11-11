@@ -7,6 +7,7 @@ library('tidyverse')
 library('sf')
 source('functions.r')
 library('here')
+library('plotly')
 ```
 
 
@@ -113,5 +114,32 @@ for(i in 1:nrow(df_scotpho_withcolour)){
 mapPlot <- mapPlot +
     geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
 
-mapPlot
+mapPlot 
+```
+
+
+
+```{r "ggplot2 version"}
+#ggplotly doesn't work in this world
+
+
+# mapPlot <- ggplot(map_scotland_la_boundary) +
+#     ggtitle("% Population prescribed drugs for anxiety, depression and psychosis") + 
+#     geom_sf(fill = "white", color = "grey") +
+#     theme_void()
+
+# for(i in 1:nrow(df_scotpho_withcolour)){
+#     # Get the name of the Local Authority
+#     la_name <- df_scotpho_withcolour[i, ]$area_name
+#     # Finds the boundary to colour by the `la_name`
+#     highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
+#     # Plots this highlight over the existing map.
+#     mapPlot <- mapPlot +
+#         geom_sf(data=highlight, fill = df_scotpho_withcolour[i, ]$colour) 
+# }
+
+# mapPlot <- mapPlot +
+#     geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
+
+# ggplotly(mapPlot, tooltip = c('label'))
 ```

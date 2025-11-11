@@ -23,7 +23,7 @@ library(plotly)    # interactive visualisations
 
 ```{r read-data}
 
-admission_data <- read_csv("alcohol_related_admissions.csv") 
+admission_data <- read_csv("data/alcohol_related_admissions.csv") 
 glimpse(admission_data)
 
 ```
@@ -90,7 +90,18 @@ median_admissions %>%
 
 Exercise 1: Could you make Grampian stand out by giving it a different colour?
 
-Add your code here!
+```{r}
+median_admissions %>%
+  filter(year == 2019) %>%
+  mutate(isGrampian = ifelse(health_board == 'Grampian', 'yes', 'no')) |> 
+  rename(alcohol_admissions = median_admissions) %>%
+  ggplot(aes(x=reorder(health_board,alcohol_admissions), y=alcohol_admissions, fill=isGrampian)) + 
+  geom_bar(stat = "identity") +
+  coord_flip() + 
+  xlab(NULL) + 
+  ylab("Age-sex standardised rate per 100,000") + 
+  ggtitle("Alcohol-related hospital admissions in 2019") 
+```
 
 
 
@@ -141,6 +152,23 @@ Could you also improve the colours by using a different colour scheme?
 
 Add your code here!
 
+```{r}
+median_admissions %>%
+  filter(year %in% c(2010, 2015, 2019)) %>%   # only select these two years
+  mutate(year = as.factor(year)) %>%          # convert years to categories ("factors")
+  rename(alcohol_admissions = median_admissions) %>%
+  ggplot(aes(x=health_board,
+         y=alcohol_admissions,
+         fill = year)) + #       alpha = 8)) + #why does this show on the legend??
+  geom_bar(position="dodge", stat = "identity") +  # without "dodge", we get a stacked bar chart
+  coord_flip() + 
+  xlab(NULL) + 
+  ylab("Age-sex standardised rate per 100,000") + 
+  ggtitle("Alcohol-related hospital admissions") + 
+  theme_bw()  +
+  scale_fill_viridis(discrete=TRUE,option='E')
+```
+
 
 
 ## Is there a relationship between alcohol-related hospital admissions and deprivation?
@@ -149,7 +177,7 @@ Let's load the second dataset, "simd20_2019.csv". This contains population estim
 
 ```{r read-deprivation-data}
 
-deprivation_data <- read_csv("simd20_2019.csv") 
+deprivation_data <- read_csv("data/simd20_2019.csv") 
 glimpse(deprivation_data)
 
 ```
@@ -181,14 +209,46 @@ Exercise 3: Link this dataset to median_admissions for 2019. (Remember to only k
 
 Add your code here!
 
+```{r}
+admission_data_2019 <- admission_data |> 
+  filter(year == 2019) |> 
+  rename(`NHS health board` = health_board) |> 
+  group_by(`NHS health board`) |> 
+  summarise(area_total_admissions = sum(alcohol_admissions))
+
+combined_admission_and_deprived_ratio <- merge(admission_data_2019, deprived_ratio, by = 'NHS health board')
+```
 
 
 
 Exercise 4: Now create a scatterplot looking at the relationship between percent deprived and alcohol-related hospital admissions.
 
-Add your code here!
+```{r}
+plot <- combined_admission_and_deprived_ratio |> 
+  ggplot(aes(x = percent_deprived, y = area_total_admissions)) +       
+  geom_point()+
+  geom_smooth(se = FALSE) + 
+  xlab("Deprived ratio")+                                                  # remove x-axis label
+  ylab("Number of alcohol admissions") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions by NHS health board in 2019") + # add title
+  theme_bw() 
+
+ggplotly(plot, tooltip = c("x","y"))
+```
 
 
+
+```{r}
+plot <- combined_admission_and_deprived_ratio |> 
+  ggplot(aes(y = percent_deprived, x = str_wrap(`NHS health board`, 10), size = area_total_admissions)) +       
+  geom_point()+
+    xlab("Deprived ratio")+                                                  # remove x-axis label
+  ylab("Number of alcohol admissions") +              # label y-axis
+  ggtitle("Alcohol-related hospital admissions by NHS health board in 2019") + # add title
+  theme_bw() 
+
+ggplotly(plot, tooltip = c("x","y"))
+```
 
 
 Possible improvements:
