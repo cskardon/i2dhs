@@ -15,9 +15,11 @@ scotland_la_boundary_map_path <- here('maps/Local_Authority_Boundaries_-_Scotlan
 map_scotland_la_boundary <- st_read(scotland_la_boundary_map_path)
 ```
 
-```{r 'Plot the map'}
+```{r 'Plot the map (Base R)'}
 plot(map_scotland_la_boundary$geometry, col = 'grey')
 ```
+
+
 
 ```{r 'Highlight one authority'}
 # local_authority = 'Dumfries and Galloway'
@@ -40,6 +42,7 @@ Need to tweak the data naming of Local Authorities:
 * In GeoJSON we have `Na h-Eileanan an Iar` in the ScotPHO data we have `Na h-Eileanan Siar`
 
 It is easier to do a replace all on the dataframe than the GeoJSON file. See the [`functions.r`](./functions.r) file for the definition
+Also - yes - we could _store_ the file with the updates, but the time taken is minimal, and every dataset with the ScotPHO names would need to be updated.
 
 ```{r 'Tidy data for use in map'}
 df_scotpho = tidy_names_of_scotpho_la_for_maps(df_scotpho)
@@ -55,6 +58,7 @@ If all the naming of the local authorites in the DataFrame is now correct - then
 # }
 ```
 
+It does - this is commented out due to the way I do the 2018 medication representation below (using the ALPHA).
 
 So there are 32 LAs
 
@@ -78,22 +82,36 @@ alpha_step = 1 / (diff_measure * 10)
 Alpha will essentially become:
 `diff from min value * alpha_step`
 
-We'll use black (i.e. `RGB(0,0,0, calc_alpha)`) to render the colours, so I need to mutate the df
+We'll use blue (i.e. `RGB(0,0,0, calc_alpha)`) to render the colours, so I need to mutate the df
 
 
 ```{r}
 df_scotpho_withcolour <- df_scotpho_totals
 
-# df_scotpho_withcolour$colour <- rgb(0,1,0, ((df_scotpho_withcolour$measure - min_measure) * 10) * alpha_step)
-df_scotpho_withcolour$colour <- rgb(0,((df_scotpho_withcolour$measure - min_measure) * 10) * alpha_step, 1, 1)
-# df_scotpho_withcolour$colour <- rgb(0,1,0, ((df_scotpho_withcolour$measure - min_measure) * 10) * alpha_step)
+# This adds the full hex code for the colour to the DF
+df_scotpho_withcolour$colour <- rgb(0,0,1, ((df_scotpho_withcolour$measure - min_measure) * 10) * alpha_step)
 ```
 
 
-```{r}
+
+```{r "ggplot2 version"}
+mapPlot <- ggplot(map_scotland_la_boundary) +
+    ggtitle("% Population prescribed drugs for anxiety, depression and psychosis") + 
+    geom_sf(fill = "white", color = "grey") +
+    theme_void()
+
 for(i in 1:nrow(df_scotpho_withcolour)){
-    la_name = df_scotpho_withcolour[i, ]$area_name
+    # Get the name of the Local Authority
+    la_name <- df_scotpho_withcolour[i, ]$area_name
+    # Finds the boundary to colour by the `la_name`
     highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
-    plot(st_geometry(highlight), col = df_scotpho_withcolour[i, ]$colour, add=TRUE)
+    # Plots this highlight over the existing map.
+    mapPlot <- mapPlot +
+        geom_sf(data=highlight, fill = df_scotpho_withcolour[i, ]$colour) 
 }
+
+mapPlot <- mapPlot +
+    geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
+
+mapPlot
 ```
