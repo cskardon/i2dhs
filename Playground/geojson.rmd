@@ -10,6 +10,9 @@ library('here')
 library('plotly')
 ```
 
+```{r Constants}
+max_alpha <- 0.5
+```
 
 ```{r 'Read in boundary map'}
 scotland_la_boundary_map_path <- here('maps/Local_Authority_Boundaries_-_Scotland.json')
@@ -17,7 +20,7 @@ map_scotland_la_boundary <- st_read(scotland_la_boundary_map_path)
 ```
 
 ```{r 'Plot the map (Base R)'}
-plot(map_scotland_la_boundary$geometry, col = 'grey')
+#plot(map_scotland_la_boundary$geometry, col = 'white')
 ```
 
 
@@ -63,6 +66,10 @@ It does - this is commented out due to the way I do the 2018 medication represen
 
 So there are 32 LAs
 
+```{r}
+greenspace <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-4.csv')
+```
+
 
 ```{r}
 # Only pulling 2018 for this as that's all the data we have
@@ -77,7 +84,7 @@ diff_measure = max_measure - min_measure # This gets the difference between min 
 # Calculate the 'alpha' (opacity) value of colours per '.1' percent.
 # The data is rounded to 1dp, so we do (diff_measure * 10) to remove the dp
 # We divide 1 by ^ because 1 is 'full' opacity (i.e. opaque).
-alpha_step = 1 / (diff_measure * 10) 
+alpha_step = max_alpha / (diff_measure * 10) 
 ```
 
 Alpha will essentially become:
@@ -118,28 +125,88 @@ mapPlot
 ```
 
 
+```{r}
+# Only pulling 2018 for this as that's all the data we have
+df_greenspace_percent <- greenspace |> 
+    select(`Local Authority`, `Total Area of Greenspace (ha)`, `Area of publicly accessible greenspace (ha)`) |> 
+    rename('local_authority' = `Local Authority` ) |> 
+    mutate(percentAccessible = (`Area of publicly accessible greenspace (ha)` / `Total Area of Greenspace (ha)`) * 100)
+
+min_gs_measure = min(df_greenspace_percent$percentAccessible) # This is the minimum % measurement in the data
+max_gs_measure = max(df_greenspace_percent$percentAccessible) # This is the max ^^
+diff_gs_measure = max_gs_measure - min_gs_measure # This gets the difference between min and max - so we can...
+
+# Calculate the 'alpha' (opacity) value of colours per '.1' percent.
+# The data isn't rounded, so we'll use 2dp, so we do (diff_measure * 100) to remove the dp
+# We divide 1 by ^ because 1 is 'full' opacity (i.e. opaque).
+alpha_gs_step = max_alpha / (diff_gs_measure * 10) 
+```
+
+
+```{r}
+df_greenspace_withcolour <- df_greenspace_percent
+
+# This adds the full hex code for the colour to the DF
+df_greenspace_withcolour$colour <- rgb(0,1,0, ((df_greenspace_withcolour$percentAccessible - min_gs_measure) * 10) * alpha_gs_step)
+```
 
 ```{r "ggplot2 version"}
-#ggplotly doesn't work in this world
+greenspacePlot <- ggplot(map_scotland_la_boundary) +
+    ggtitle("Combined") + 
+    geom_sf(fill = "white", color = "grey") +
+    theme_void()
+
+for(i in 1:nrow(df_greenspace_withcolour)){
+    # Get the name of the Local Authority
+    la_name <- df_greenspace_withcolour[i, ]$local_authority
+    # Finds the boundary to colour by the `la_name`
+    highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
+    # Plots this highlight over the existing map.
+    greenspacePlot <- greenspacePlot +
+        geom_sf(data=highlight, fill = df_greenspace_withcolour[i, ]$colour) 
+}
+
+greenspacePlot <- greenspacePlot +
+    geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
+
+greenspacePlot 
+```
+
+```{r "ggplot2 version"}
+combinedPlot <- ggplot(map_scotland_la_boundary) +
+    ggtitle("% Greenspace accessible") + 
+    geom_sf(fill = "white", color = "grey") +
+    theme_void()
+
+for(i in 1:nrow(df_greenspace_withcolour)){
+    # Get the name of the Local Authority
+    la_name <- df_greenspace_withcolour[i, ]$local_authority
+    # Finds the boundary to colour by the `la_name`
+    highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
+    # Plots this highlight over the existing map.
+    combinedPlot <- combinedPlot +
+        geom_sf(data=highlight, fill = df_greenspace_withcolour[i, ]$colour) 
+}
+
+for(i in 1:nrow(df_scotpho_withcolour)){
+    # Get the name of the Local Authority
+    la_name <- df_scotpho_withcolour[i, ]$area_name
+    # Finds the boundary to colour by the `la_name`
+    highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
+    # Plots this highlight over the existing map.
+    combinedPlot <- combinedPlot +
+        geom_sf(data=highlight, fill = df_scotpho_withcolour[i, ]$colour) 
+}
+
+combinedPlot <- combinedPlot +
+    geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
+
+combinedPlot 
+```
 
 
-# mapPlot <- ggplot(map_scotland_la_boundary) +
-#     ggtitle("% Population prescribed drugs for anxiety, depression and psychosis") + 
-#     geom_sf(fill = "white", color = "grey") +
-#     theme_void()
 
-# for(i in 1:nrow(df_scotpho_withcolour)){
-#     # Get the name of the Local Authority
-#     la_name <- df_scotpho_withcolour[i, ]$area_name
-#     # Finds the boundary to colour by the `la_name`
-#     highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
-#     # Plots this highlight over the existing map.
-#     mapPlot <- mapPlot +
-#         geom_sf(data=highlight, fill = df_scotpho_withcolour[i, ]$colour) 
-# }
 
-# mapPlot <- mapPlot +
-#     geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
-
-# ggplotly(mapPlot, tooltip = c('label'))
+```{r}
+#Does nothing, but allows you to use 'Run Above'
 ```
