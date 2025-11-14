@@ -19,6 +19,7 @@ Local and national data from the The Scottish Public Health Observatory (ScotPHO
 
 ```{r}
 all_data <- read_csv('./data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv')
+green_space <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-4.csv')
 ```
 
 ## Tidy the data
