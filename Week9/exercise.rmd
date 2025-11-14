@@ -1,0 +1,160 @@
+---
+title: "Week 9 Exercise"
+output: pdf_document
+---
+
+# Step 1
+
+Download and save the two attached files in your RStudio project.
+Read in the data and answer the following questions:
+1. Are there any problems with the values of age and deprivation?
+2. What is the minimum, maximum and median age for each deprivation level?
+
+
+```{r "Libraries"}
+library('tidyverse')
+library('lubridate')
+library('viridis')
+```
+
+Read in the data, also coercing the columns into more usable types where it makes sense, e.g. using an `Integer` for the ID as opposed to the default `Double`, and using a 
+specific `Date` type for the dates - which would allow easier calculations later on.
+
+```{r "Read in the data"}
+hospital_admissions <- read_csv('./data/hospital_admissions.csv') |> 
+    mutate(id = as.integer(id)) |> 
+    mutate(date_admit = as.Date(date_admit, tryFormats = c("%d/%m/%Y"))) |> 
+    mutate(date_discharge = as.Date(date_discharge, tryFormats = c("%d/%m/%Y")))
+population_demographics <- read_csv('./data/population_demographics.csv') |> 
+    mutate(id = as.integer(id))
+```
+
+
+A quick summary table of the `population_demographics` data frame:
+
+```{r "Quick eval of demographics"}
+population_demographics |> 
+    summarise(
+        n = n(), 
+        minAge = min(age), maxAge = max(age), missingAge = sum(is.na(age)), 
+        minDep = min(deprivation, na.rm=TRUE), maxDep = max(deprivation, na.rm=TRUE), missingDep = sum(is.na(deprivation))
+        )
+```
+
+So, 
+* `age` - the range goes from `0` to `150` technically the `0` could be correct - but the `150` is definitely wrong, no missing values though
+* `deprivation` - contains 71 missing values, once those are not included, the range (`1`-`5`) is the expected range
+
+# Step 2
+
+Let's keep going! Attached is a dataset with hospital admissions for the same group of patients as population_demographics.csv. 
+It includes the patient ID, date of admission and date of discharge from hospital. Like the demographics dataset, this is also a completely fake dataset.
+
+1. Download and save hospital_admissions.csv in your R project folder
+2. Read in and inspect the data. Then create a single dataframe that contains both demographic and hospital admission data for each patient. 
+3. You can add this to the same R markdown you used previously for the demographic data.
+
+```{r "Quick eval of admissions"}
+hospital_admissions |> 
+    summarise(
+        n = n(), 
+        minAdmissionYear = min(year(date_admit)), maxAdmissionYear = max(year(date_admit)),
+        minDischargeYear = min(year(date_discharge)), maxDischargeYear = max(year(date_discharge)),
+        )
+```
+
+So the `date_admit` values look ok, with the min/max year being `2020`
+However, the `date_discharge` year is from `2002` to `2021`
+
+```{r "Quick eval of admissions"}
+hospital_admissions |> 
+    filter( date_admit > date_discharge) |> 
+    summarise(n = n())
+```
+
+There are 20 rows where `date_admit` is after `date_discharge` which is clearly wrong
+
+So, let's join the two together, but we'll clean it by removing the rows with invalid dates, and `na`
+
+```{r}
+combined <- inner_join(
+    hospital_admissions |> filter (date_admit <= date_discharge),
+    population_demographics |> filter ( !is.na(deprivation) & age <= 105 ), 
+    by="id"
+)
+
+combined |> 
+    summarise(n = n())
+```
+
+We now have 5166 entries.
+
+# Step 3
+
+Let's put everything together with our last exercise:
+
+You will be working with the same fake healthcare data from “population_demographics.csv” and “hospital_admissions.csv”. We would like 
+you to summarise total time in hospital in 2020 by age and deprivation. Include a graph you think 
+would be useful to explain your answer to a general audience.
+
+```{r}
+total_time_2020 <- combined |> 
+    filter( date_discharge <= as.Date('2020-12-31') & date_admit >= as.Date('2020-01-01') ) |> 
+    mutate( total_time_days = as.numeric(date_discharge - date_admit) )
+```
+
+
+```{r}
+avg_time_in_hospital_by_deprivation_and_age_groups <- total_time_2020 |> 
+    mutate(age_bin = cut(age, breaks=c(0,10,20,30,40,50,60,70,80,90,100), include.lowest = TRUE)) |> 
+    group_by(deprivation, age_bin) |> 
+    summarise(avg_days_in_hospital = mean(total_time_days))
+```
+
+
+```{r "SIMD Definitions"}
+plot_names <- c('1' = '1 - Most Deprived',
+                '2' = '2',
+                '3' = '3',
+                '4' = '4',
+                '5' = '5 - Least Deprived')
+```
+
+```{r "Scatter graph of the deprivation"}
+avg_time_in_hospital_by_deprivation_and_age_groups |> 
+    mutate(deprivation = as.character(deprivation)) |> 
+    ggplot(
+        aes(x = age_bin, y=avg_days_in_hospital, colour=deprivation)) + 
+    geom_point() +
+    scale_y_continuous(breaks = seq(0, 13, 1)) +
+    #scale_x_continuous(breaks = seq(0,100, 5)) + 
+    ggtitle("Length of stay in hospital by Age and by Deprivation") +
+    ylab("Average number of days in Hospital") +
+    xlab("Age Group") +
+    scale_colour_viridis_d() + 
+    theme_bw()
+```
+
+
+```{r}
+total_time_2020 |> 
+    group_by(deprivation, age) |> 
+    summarise(avg_days_in_hospital = mean(total_time_days)) |> 
+    mutate(deprivation = as.character(deprivation)) |> 
+    ggplot(aes(x = age, y=avg_days_in_hospital, colour=deprivation)) + 
+    geom_point() +
+    geom_smooth(se = FALSE) + 
+    scale_y_continuous(breaks = seq(0, 17, 1)) +
+    scale_x_continuous(breaks = seq(0,100, 5)) + 
+    labs(
+        title = "Length of stay in hospital by Age and by Deprivation",
+        x = "Age",
+        y = "Number of days in Hospital",
+        color = "SIMDv2 Deprivation Level"
+    ) +
+    scale_color_viridis_d() +
+    theme(panel.background = element_rect(fill = 'darkgrey', color = 'black'),
+          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
+          panel.grid.minor = element_line(color = 'lightgrey', size = .2))
+    #theme_bw()
+```

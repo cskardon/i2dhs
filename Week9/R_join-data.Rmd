@@ -1,0 +1,51 @@
+---
+title: "Joining datasets"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Let's practice with different types of joins.
+
+You have two tables, the first table contains all people admitted to a local hospital in the last 100 days with a stroke, and a second table which contains all people admitted to a local hospital in the last 100 days with a heart attack. 
+
+```{r}
+# let's build our toy datasets
+library(dplyr)
+
+stroke_patients <- data.frame(
+  patientID = 1001 + sort(sample(1:40,20)),
+  admission_date = Sys.Date() - sample(1:100, 20)
+)
+
+heart_patients <- data.frame(
+  patientID = 1001 + sort(sample(1:40,20)),
+  admission_date = Sys.Date() - sample(1:100, 20)
+)
+  
+```
+What will we get if we do a left join?
+
+```{r}
+leftjoin_dataset <- left_join(stroke_patients, heart_patients, 
+                              by = "patientID",
+                              suffix = c(".stroke", ".heart"))
+
+head(leftjoin_dataset)
+```
+What about an inner join?
+
+```{r}
+innerjoin_dataset <- inner_join(stroke_patients, heart_patients, 
+                              by = "patientID",
+                              suffix = c(".stroke", ".heart"))
+
+head(innerjoin_dataset)
+```
+If you wanted to produce a table that shows those who have had either a stroke, heart attack, or both, what type of join would you use?
+
+```{r}
+# Add your code here!
+```
+

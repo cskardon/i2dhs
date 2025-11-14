@@ -1,0 +1,4 @@
+Variable	Variable name	Measurement Unit	Allowed values	Description
+Patient ID number	id	Numeric	0001-9999	ID assigned to patient in sequential order
+Age in years	age	Numeric	0 - 105	Age of patient in years
+SIMD score	deprivation	Numeric	1 - 5	"Scottish Index of Multiple Deprivation for the patient, where 1 is least and 5 is most deprived"
