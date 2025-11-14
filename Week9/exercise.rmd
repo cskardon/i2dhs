@@ -150,7 +150,7 @@ total_time_2020 |>
         title = "Length of stay in hospital by Age and by Deprivation",
         x = "Age",
         y = "Number of days in Hospital",
-        color = "SIMDv2 Deprivation Level"
+        color = "SIMD Deprivation Level"
     ) +
     scale_color_viridis_d() +
     theme(panel.background = element_rect(fill = 'darkgrey', color = 'black'),
