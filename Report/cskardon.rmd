@@ -1,50 +1,112 @@
-# 
+---
+title: "Charlotte Skardon (52533106) - Introduction to Data Health Science Report"
+output: pdf_document
+---
 
-I want to investigate how the population prescribed drugs for anxiety, depression and psychosis vary geographically and how they have changed over a 10-year period at the Scottish national and local authority level.
 
-1.	What are the rates of prescriptions at a national level?
-2.	Are there differences in prescriptions between local authorities?
-3.	If they have changed, how have they have changed over the ten years at a national level?
-4.	If they have changed, how have they have changed over ten years between local authorities?
+# TOODS
+
+[] Summary
+[] data acquisition,
+[] cleaning,
+[] transformation,
+[] analysis,
+[] visualisation
+
+I want to investigate how the population prescribed drugs for anxiety, depression and psychosis vary geographically 
+and how they have changed over a 10-year period at the Scottish national and local authority level.
+
+1. What are the rates of prescriptions at a national level?
+2. Are there differences in prescriptions between local authorities?
+3. If they have changed, how have they have changed over the ten years at a national level?
+4. If they have changed, how have they have changed over ten years between local authorities?
+
+## Summary
+
+* Who is your target audience, and what is the key message you aim to convey through your visualisations? 
+* What data did you use to produce your visualisation? What are the limitations of these data? 
+* What are the strengths and limitations of the analytical and visualisation approach you adopted?
 
 ## Libraries
 
 ```{r "Import Libraries"}
 library("tidyverse")
+library("viridis")
 ```
 
-## Read in data files
+## Data Acquisition - Read in data files
 
 Local and national data from the The Scottish Public Health Observatory (ScotPHO) Online Profiles Tool (2025) website. Available at: https://scotland.shinyapps.io/ScotPHO_profiles_tool/ (Accessed: 03 November 2025).
 
-```{r}
-all_data <- read_csv('./data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv')
-green_space <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-4.csv')
+```{r "Read in the ScotPHO data"}
+df_all_data <- read_csv(
+  './data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv'
+  )
 ```
 
-## Tidy the data
-
+Greenspace data from: Greenspace Scotland (2018), Third State of Scotland's Greenspace Report. Available at: https://www.greenspacescotland.org.uk/statistics (Accessed: 23rd October 2025)
 
 ```{r}
-national_data <- all_data |> 
+df_green_space <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-4.csv')
+```
+
+## Cleaning the data
+
+```{r}
+df_all_data |> 
+    # Filtering by the 'total' quintile, as that's what we're interested in
+    filter(quintile == 'Total') |> 
+    # Getting the count (`n`) and the min/max values for the `value` and `year` columns to see 
+    # if anything is out of the expected range
+    # Also checking for missing (`na`) values in the columns
+    summarise(
+        n = n(), 
+        minValue = min(value, na.rm=TRUE), maxValue = max(value, na.rm=TRUE), missingValue = sum(is.na(value)),
+        minYear = min(year), maxYear = max(year), missingYear = sum(is.na(year))
+    )
+```
+
+
+* There _are_ values missing from the `value` column
+* `Year` is treated as a double, which is not correct
+
+```{r}
+df_all_data <- df_all_data |> 
+    mutate(year = as.integer(year)) |> 
+    filter(!is.na(value))
+```
+
+
+## Transforming the data
+
+```{r}
+national_data <- df_all_data |> 
+    # Filtering by 'Total' values and only for Scotland as a whole
     filter(quintile == "Total" & area_type=="Scotland") |> 
+    # Only selecting the 'year' and 'value' columns as this is all that is needed.
     select(c("year", "value"))    
 
-local_authority_data <- all_data |>
+local_authority_data <- df_all_data |>
+    # Filtering by 'Total' values and where the 'area_type' is the Council Area to get Local Authority data
     filter(quintile == "Total" & area_type=="Council area") |> 
     select(c("year", "area_name", "value"))
 ```
 
+## Analysing the data
+
+## Visualisation
 
 ```{r}
 national_data |> 
     ggplot(aes(x=year, y=value)) +
-    geom_path()
+    geom_path() + 
+    scale_colour_viridis_d() +
+    theme_minimal()
 ```
-
 
 ```{r}
 local_authority_data |> 
     ggplot(aes(x=year, y=value, color=area_name)) +
-    geom_path()
+    geom_path() + 
+    scale_colour_viridis_d()
 ```
