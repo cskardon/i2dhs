@@ -39,16 +39,10 @@ library("viridis")
 Local and national data from the The Scottish Public Health Observatory (ScotPHO) Online Profiles Tool (2025) website. Available at: https://scotland.shinyapps.io/ScotPHO_profiles_tool/ (Accessed: 03 November 2025).
 
 ```{r "Read in the ScotPHO data"}
-df_all_data <- read_csv(
-  './data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv'
-  )
+df_all_data <- read_csv('./data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv')
 ```
 
-Greenspace data from: Greenspace Scotland (2018), Third State of Scotland's Greenspace Report. Available at: https://www.greenspacescotland.org.uk/statistics (Accessed: 23rd October 2025)
 
-```{r}
-df_green_space <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-4.csv')
-```
 
 ## Cleaning the data
 
@@ -79,20 +73,42 @@ df_all_data <- df_all_data |>
 
 ## Transforming the data
 
+Creating two data frames, one for the national level data (where the `area_type` equals "Scotland") and at the local authority level (where the `area_type` equals "Council area"). 
+In both the `value` used is filtered by the `quintile` column, pulling out only the "Total" values.
+The minimum columns needed are also selected, at the national level that is only the `year` and `value`, at the local authority level, the `area_name` is also selected.
+
 ```{r}
 national_data <- df_all_data |> 
-    # Filtering by 'Total' values and only for Scotland as a whole
-    filter(quintile == "Total" & area_type=="Scotland") |> 
-    # Only selecting the 'year' and 'value' columns as this is all that is needed.
-    select(c("year", "value"))    
+        # Filtering by 'Total' values and only for Scotland as a whole
+        filter(quintile == "Total" & area_type=="Scotland") |> 
+        # Only selecting the 'year' and 'value' columns as this is all that is needed.
+        select(c("year", "value")) |> 
+        rename(percent_prescribed = value)
 
 local_authority_data <- df_all_data |>
-    # Filtering by 'Total' values and where the 'area_type' is the Council Area to get Local Authority data
-    filter(quintile == "Total" & area_type=="Council area") |> 
-    select(c("year", "area_name", "value"))
+        # Filtering by 'Total' values and where the 'area_type' is the Council Area to get Local Authority data
+        filter(quintile == "Total" & area_type=="Council area") |> 
+        # Selecting the 'year', 'value' and 'area_name' for the local authorities
+        select(c("year", "area_name", "value")) |> 
+        rename(percent_prescribed = value)
 ```
 
 ## Analysing the data
+
+```{r}
+local_authority_data |> 
+    filter(year == 2018) |> 
+    kruskal.test(percent_prescribed~area_name, data = .)
+```
+
+
+```{r}
+local_authority_data |> 
+    # filter(
+
+    #     area_name %in% c("Aberdeen City", "Aberdeenshire", "Angus")) |> 
+    kruskal.test(percent_prescribed~area_name, data = .)
+```
 
 ## Visualisation
 
@@ -109,4 +125,13 @@ local_authority_data |>
     ggplot(aes(x=year, y=value, color=area_name)) +
     geom_path() + 
     scale_colour_viridis_d()
+```
+
+
+# Extra
+
+Greenspace data from: Greenspace Scotland (2018), Third State of Scotland's Greenspace Report. Available at: https://www.greenspacescotland.org.uk/statistics (Accessed: 23rd October 2025)
+
+```{r}
+df_green_space <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-4.csv')
 ```

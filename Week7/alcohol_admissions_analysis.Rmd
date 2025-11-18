@@ -22,10 +22,10 @@ Our data is saved in csv files, so we will use the read_csv function.
 
 ```{r read-data}
 # alcohol-related hospital admissions
-data <- read_csv("scotpho_data_extract.csv") 
+data <- read_csv("data/scotpho_data_extract.csv") 
 
 # intermediate data zone info
-intermediate_zone_codes <- read_csv("iz2011_codes_and_labels_21042020.csv") 
+intermediate_zone_codes <- read_csv("data/iz2011_codes_and_labels_21042020.csv") 
 
 ```
 
