@@ -45,7 +45,7 @@ df_all_data <- read_csv('./data/ScotPHO_Population prescribed drugs for anxiety 
 
 
 
-## Cleaning the data
+## Cleaning and transforming the data
 
 ```{r}
 df_all_data |> 
@@ -61,35 +61,37 @@ df_all_data |>
     )
 ```
 
-* There are no missing values
+* There are no missing values - so no need to filter where the value `!is.na(value)`
 * `Year` is treated as a double, which is not correct
 
 ```{r}
 df_all_data <- df_all_data |> 
-    mutate(year = as.integer(year)) |> 
-    filter(!is.na(value))
+    mutate(year = as.integer(year))
 ```
 
+Now, we're creating two data frames, one for the national level data (where the `area_type` equals "Scotland") and one for the local authority level (where the `area_type` equals "Council area"). 
 
-## Transforming the data
-
-Creating two data frames, one for the national level data (where the `area_type` equals "Scotland") and at the local authority level (where the `area_type` equals "Council area"). 
 In both the `value` used is filtered by the `quintile` column, pulling out only the "Total" values.
+
 The minimum columns needed are also selected, at the national level that is only the `year` and `value`, at the local authority level, the `area_name` is also selected.
 
+In both cases, `value` is renamed to `percent_prescribed` to make it clearer when it it used later on what the `value` is.
+
 ```{r}
-national_data <- df_all_data |> 
+df_national_data <- df_all_data |> 
         # Filtering by 'Total' values and only for Scotland as a whole
         filter(quintile == "Total" & area_type=="Scotland") |> 
         # Only selecting the 'year' and 'value' columns as this is all that is needed.
         select(c("year", "value")) |> 
+        # Rename value column to percent_prescribed for clarity
         rename(percent_prescribed = value)
 
-local_authority_data <- df_all_data |>
+df_local_authority_data <- df_all_data |>
         # Filtering by 'Total' values and where the 'area_type' is the Council Area to get Local Authority data
         filter(quintile == "Total" & area_type=="Council area") |> 
         # Selecting the 'year', 'value' and 'area_name' for the local authorities
         select(c("year", "area_name", "value")) |> 
+        # Rename value column to percent_prescribed for clarity
         rename(percent_prescribed = value)
 ```
 
@@ -98,39 +100,100 @@ local_authority_data <- df_all_data |>
 Running some basic stats for the `national` and `local_authority` data sets.
 
 ```{r}
-national_data |> 
-    summarise(n = n(), mean = mean(percent_prescribed), sd = sd(percent_prescribed), iqr = IQR(percent_prescribed))
-local_authority_data |> 
-    summarise(n = n(), mean = mean(percent_prescribed), sd = sd(percent_prescribed), iqr = IQR(percent_prescribed))
+df_national_data |> 
+    summarise(
+        # Count
+        n = n(),
+        # Mean 
+        mean = mean(percent_prescribed), 
+        # Standard Deviation
+        sd = sd(percent_prescribed), 
+        # Inter-quartile range
+        iqr = IQR(percent_prescribed)
+    )
+df_local_authority_data |> 
+    summarise(
+        n = n(), 
+        mean = mean(percent_prescribed), 
+        sd = sd(percent_prescribed), 
+        iqr = IQR(percent_prescribed)
+    )
 ```
 
-The biggest differences are the standard deviation and inter-quartile range which shows there is a much wider range of values for the population prescribed drugs for anxiety, depression and psychosis on a local authority basis compared to national.
-
-
-# CHARLOTTE - DO YOU WANT TO DO THIS?
-```{r}
-local_authority_data |> 
-    filter(
-        area_name %in% c("Aberdeen City", "Aberdeenshire", "Angus")) |> 
-    kruskal.test(percent_prescribed~area_name)
-```
+The biggest differences are the standard deviation (`sd`) and inter-quartile range (`iqr`) which shows there is a much wider range of values for the population prescribed drugs for anxiety, depression and psychosis on a local authority basis compared to national. The `mean` is the same which is what would be expected.
 
 ## Visualisation
 
-```{r}
-national_data |> 
+```{r "National Data"}
+df_national_data |> 
+    ggplot(aes(x = year, y=percent_prescribed)) + 
+    geom_point() +
+    geom_smooth(se = FALSE) + 
+    scale_y_continuous(limits=c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
+    labs(
+        title = "Population prescribed drugs for anxiety, depression and psychosis in Scotland",
+        x = "Year",
+        y = "Percent of Population"
+    ) +
+    scale_color_viridis_d() +
+    theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
+          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
+          panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
+```
+
+```{r "National Data"}
+df_national_data |> 
     ggplot(aes(x=year, y=percent_prescribed)) +
     geom_path() + 
+    scale_y_continuous(limits=c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
+    labs(
+        title = "Population prescribed drugs for anxiety, depression and psychosis in Scotland",
+        x = "Year",
+        y = "Percent of Population"
+    ) +
     scale_colour_viridis_d() +
     theme_minimal()
 ```
 
-```{r}
-local_authority_data |> 
+
+```{r "Local Authority Data"}
+df_local_authority_data |> 
+    ggplot(aes(x = year, y=percent_prescribed, colour=area_name)) + 
+    geom_point() +
+    geom_smooth(se = FALSE) + 
+    scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
+    labs(
+        title = "Population prescribed drugs for anxiety, depression and psychosis for each local authority in Scotland",
+        x = "Year",
+        y = "Percent of Population",
+        colour = "Local Authority Name"
+    ) +
+    scale_color_viridis_d() +
+    theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
+          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
+          panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
+```
+
+```{r "Local Authority Data"}
+df_local_authority_data |> 
     ggplot(aes(x=year, y=percent_prescribed, color=area_name)) +
     geom_path() + 
-    scale_colour_viridis_d()
+    scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
+    labs(
+        title = "Population prescribed drugs for anxiety, depression and psychosis for each local authority in Scotland",
+        x = "Year",
+        y = "Percent of Population",
+        colour = "Local Authority Name"
+    ) +
+    scale_color_viridis_d() +
+    theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
+          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
+          panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
 ```
+
+
+
+
 
 
 # Extra
