@@ -24,15 +24,61 @@ and how they have changed over a 10-year period at the Scottish national and loc
 
 ## Summary
 
+
 * Who is your target audience, and what is the key message you aim to convey through your visualisations? 
+ 
+The target audience is government and public bodies, to help inform decision making at a local and national level. The key message to convey is how much the population prescribed drugs for anxiety, depression and psychosis has changed, how that varies regionally.
+
 * What data did you use to produce your visualisation? What are the limitations of these data? 
+
+The data used were from the Scottish Public Health Observatory (ScotPHO) [profiles tool](https://scotland.shinyapps.io/ScotPHO_profiles_tool/). The the population percentage prescribed drugs for anxiety, depression and psychosis indicator was selected for the Inequalities  'Council Area' and 'Scotland' datasets, covering the years from 2014 to 2023, and the 'total' value was used. 
+
+*********The main limitations of the data is the granularity, 
+
 * What are the strengths and limitations of the analytical and visualisation approach you adopted?
+
+The line charts produced show the general trend
 
 ## Libraries
 
 ```{r "Import Libraries"}
 library("tidyverse")
 library("viridis")
+library('plotly')
+library('sf')
+library('here')
+library('ggrepel')
+```
+
+## Helper Functions & Constants
+
+NB. I would normally have put this into a separate `.r` file
+
+```{r "Sets the names of the ScotPHO areas to match geoplot"}
+tidy_names_of_scotpho_la_for_maps <- function(df_scotpho_la_data) {
+  #' Tidy the names used in the ScotPHO Local Authority dataset
+  #' 
+  #' @description Tidies the names to match the ones used by the Improvement Service to render maps.
+  #' 
+  #' NB this does not modify the parameter, it returns an updated version of the data frame.
+  #' 
+  #' @section What it does
+  #' 
+  #' * Replaces '&' with 'and'
+  #' * Replaces 'Na h-Eileanan Siar' with `Na h-Eileanan an Iar`
+  #' 
+  #' @param df_scotpho_la_data the ScotPHO data frame to be modified
+
+  working_df = data.frame(df_scotpho_la_data)
+  working_df$area_name = str_replace_all(working_df$area_name, "&", "and")
+  working_df$area_name = str_replace_all(working_df$area_name, "Siar", "an Iar")
+  return(working_df)
+}
+```
+
+```{r Constants}
+# A constant representing the alpha used in the Chloropleth
+max_alpha <- 1
 ```
 
 ## Data Acquisition - Read in data files
@@ -43,11 +89,11 @@ Local and national data from the The Scottish Public Health Observatory (ScotPHO
 df_all_data <- read_csv('./data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv')
 ```
 
-
-
 ## Cleaning and transforming the data
 
-```{r}
+We're only actually interested in the `Total` data, so we'll filter on that, and run a quick summary to see what is in the data.
+
+```{r "Check values of the data"}
 df_all_data |> 
     # Filtering by the 'total' quintile, as that's what we're interested in
     filter(quintile == 'Total') |> 
@@ -64,7 +110,7 @@ df_all_data |>
 * There are no missing values - so no need to filter where the value `!is.na(value)`
 * `Year` is treated as a double, which is not correct
 
-```{r}
+```{r "Mutate the type of the year to be an integer"}
 df_all_data <- df_all_data |> 
     mutate(year = as.integer(year))
 ```
@@ -77,7 +123,7 @@ The minimum columns needed are also selected, at the national level that is only
 
 In both cases, `value` is renamed to `percent_prescribed` to make it clearer when it it used later on what the `value` is.
 
-```{r}
+```{r "Create dataframes for national and local authority sets"}
 df_national_data <- df_all_data |> 
         # Filtering by 'Total' values and only for Scotland as a whole
         filter(quintile == "Total" & area_type=="Scotland") |> 
@@ -126,24 +172,8 @@ The biggest differences are the standard deviation (`sd`) and inter-quartile ran
 
 ```{r "National Data"}
 df_national_data |> 
-    ggplot(aes(x = year, y=percent_prescribed)) + 
-    geom_point() +
-    geom_smooth(se = FALSE) + 
-    scale_y_continuous(limits=c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
-    labs(
-        title = "Population prescribed drugs for anxiety, depression and psychosis in Scotland",
-        x = "Year",
-        y = "Percent of Population"
-    ) +
-    scale_color_viridis_d() +
-    theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
-          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
-          panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
-```
-
-```{r "National Data"}
-df_national_data |> 
     ggplot(aes(x=year, y=percent_prescribed)) +
+    geom_point() +
     geom_path() + 
     scale_y_continuous(limits=c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
     labs(
@@ -156,27 +186,12 @@ df_national_data |>
 ```
 
 
-```{r "Local Authority Data"}
-df_local_authority_data |> 
-    ggplot(aes(x = year, y=percent_prescribed, colour=area_name)) + 
-    geom_point() +
-    geom_smooth(se = FALSE) + 
-    scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
-    labs(
-        title = "Population prescribed drugs for anxiety, depression and psychosis for each local authority in Scotland",
-        x = "Year",
-        y = "Percent of Population",
-        colour = "Local Authority Name"
-    ) +
-    scale_color_viridis_d() +
-    theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
-          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
-          panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
-```
+
 
 ```{r "Local Authority Data"}
-df_local_authority_data |> 
+local_authority_plot <- df_local_authority_data |> 
     ggplot(aes(x=year, y=percent_prescribed, color=area_name)) +
+    geom_point() +
     geom_path() + 
     scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
     labs(
@@ -185,16 +200,76 @@ df_local_authority_data |>
         y = "Percent of Population",
         colour = "Local Authority Name"
     ) +
-    scale_color_viridis_d() +
+    scale_color_viridis(discrete = TRUE) +
     theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
           panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
           panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
+
+ggplotly(local_authority_plot,tooltip = c("colour","y"))
 ```
 
 
 
+```{r "Work out the percent differences"}
+df_local_authority_change <- df_local_authority_data |> 
+    filter(year %in% c(2014, 2023)) |> 
+    group_by(area_name) |> 
+    pivot_wider(names_from = year, values_from = percent_prescribed) |> 
+    mutate(diff_percent = `2023` - `2014`) 
+```
+
+```{r}
+min_diff = min(df_local_authority_change$diff_percent) # This is the minimum % measurement in the data
+max_diff = max(df_local_authority_change$diff_percent) # This is the max ^^
+diff_measure = max_diff - min_diff # This gets the difference between min and max - so we can...
+
+# Calculate the 'alpha' (opacity) value of colours per '.1' percent.
+# The data is rounded to 1dp, so we do (diff_measure * 10) to remove the dp
+# We divide 1 by ^ because 1 is 'full' opacity (i.e. opaque).
+alpha_step = max_alpha / (diff_measure * 10) 
+```
+
+Alpha will essentially become:
+`diff from min value * alpha_step`
+
+We'll use blue (i.e. `RGB(0,0,0, calc_alpha)`) to render the colours, so I need to mutate the df
+
+```{r}
+# This adds the full hex code for the colour to the DF
+df_local_authority_change$colour <- rgb(0,0,1, ((df_local_authority_change$diff_percent - min_diff) * 10) * alpha_step)
+```
+
+```{r 'Tidy data for use in map'}
+df_local_authority_change = tidy_names_of_scotpho_la_for_maps(df_local_authority_change)
+```
+
+```{r}
+scotland_la_boundary_map_path <- here('maps/Local_Authority_Boundaries_-_Scotland.json')
+map_scotland_la_boundary <- st_read(scotland_la_boundary_map_path)
+```
 
 
+```{r "ggplot2 version"}
+mapPlot <- ggplot(map_scotland_la_boundary) +
+    ggtitle("% Population prescribed drugs for anxiety, depression and psychosis") + 
+    geom_sf(fill = "white", color = "grey") +
+    theme_void()
+
+for(i in 1:nrow(df_local_authority_change)){
+    # Get the name of the Local Authority
+    la_name <- df_local_authority_change[i, ]$area_name
+    # Finds the boundary to colour by the `la_name`
+    highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
+    # Plots this highlight over the existing map.
+    mapPlot <- mapPlot +
+        geom_sf(data=highlight, fill = df_local_authority_change[i, ]$colour) 
+}
+
+mapPlot <- mapPlot +
+    geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
+
+mapPlot 
+```
 
 # Extra
 
@@ -205,57 +280,3 @@ df_green_space <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-
 ```
 
 
-```{r}
-# avg_time_in_hospital_by_deprivation_and_age_groups <- total_time_2020 |> 
-#     mutate(age_bin = cut(age, breaks=c(0,10,20,30,40,50,60,70,80,90,100), include.lowest = TRUE)) |> 
-#     group_by(deprivation, age_bin) |> 
-#     summarise(avg_days_in_hospital = mean(total_time_days))
-```
-
-
-```{r "SIMD Definitions"}
-# plot_names <- c('1' = '1 - Most Deprived',
-#                 '2' = '2',
-#                 '3' = '3',
-#                 '4' = '4',
-#                 '5' = '5 - Least Deprived')
-```
-
-```{r "Scatter graph of the deprivation"}
-# avg_time_in_hospital_by_deprivation_and_age_groups |> 
-    # mutate(deprivation = as.character(deprivation)) |> 
-    # ggplot(
-    #     aes(x = age_bin, y=avg_days_in_hospital, colour=deprivation)) + 
-    # geom_point() +
-    # scale_y_continuous(breaks = seq(0, 13, 1)) +
-    # #scale_x_continuous(breaks = seq(0,100, 5)) + 
-    # ggtitle("Length of stay in hospital by Age and by Deprivation") +
-    # ylab("Average number of days in Hospital") +
-    # xlab("Age Group") +
-    # scale_colour_viridis_d() + 
-    # theme_bw()
-```
-
-
-```{r}
-# total_time_2020 |> 
-#     group_by(deprivation, age) |> 
-#     summarise(avg_days_in_hospital = mean(total_time_days)) |> 
-#     mutate(deprivation = as.character(deprivation)) |> 
-#     ggplot(aes(x = age, y=avg_days_in_hospital, colour=deprivation)) + 
-#     geom_point() +
-#     geom_smooth(se = FALSE) + 
-#     scale_y_continuous(breaks = seq(0, 17, 1)) +
-#     scale_x_continuous(breaks = seq(0,100, 5)) + 
-#     labs(
-#         title = "Length of stay in hospital by Age and by Deprivation",
-#         x = "Age",
-#         y = "Number of days in Hospital",
-#         color = "SIMD Deprivation Level"
-#     ) +
-#     scale_color_viridis_d() +
-#     theme(panel.background = element_rect(fill = 'darkgrey', color = 'black'),
-#           panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
-#           panel.grid.minor = element_line(color = 'lightgrey', size = .2))
-#     #theme_bw()
-```
