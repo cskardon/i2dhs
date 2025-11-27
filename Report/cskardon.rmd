@@ -53,37 +53,6 @@ library('ggrepel')
 library('gghighlight')
 ```
 
-## Helper Functions & Constants
-
-NB. I would normally have put this into a separate `.r` file
-
-```{r "Sets the names of the ScotPHO areas to match geoplot"}
- <- function(df_scotpho_la_data) {
-  #' Tidy the names used in the ScotPHO Local Authority dataset
-  #' 
-  #' @description Tidies the names to match the ones used by the Improvement Service to render maps.
-  #' 
-  #' NB this does not modify the parameter, it returns an updated version of the data frame.
-  #' 
-  #' @section What it does
-  #' 
-  #' * Replaces '&' with 'and'
-  #' * Replaces 'Na h-Eileanan Siar' with `Na h-Eileanan an Iar`
-  #' 
-  #' @param df_scotpho_la_data the ScotPHO data frame to be modified
-
-  working_df = data.frame(df_scotpho_la_data)
-  working_df$area_name = str_replace_all(working_df$area_name, "&", "and")
-  working_df$area_name = str_replace_all(working_df$area_name, "Siar", "an Iar")
-  return(working_df)
-}
-```
-
-```{r Constants}
-# A constant representing the alpha used in the Chloropleth
-max_alpha <- 1
-```
-
 ## Data Acquisition - Read in data files
 
 Local and national data from the The Scottish Public Health Observatory (ScotPHO) Online Profiles Tool (2025) website. Available at: https://scotland.shinyapps.io/ScotPHO_profiles_tool/ (Accessed: 03 November 2025).
@@ -198,18 +167,17 @@ local_authority_plot <- df_local_authority_data |>
     geom_path() + 
     scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
     labs(
-        title = "Population prescribed drugs for anxiety, depression and psychosis for each local authority in Scotland",
+        title = "Percent of Population prescribed drugs for anxiety,\ndepression and psychosis for each local authority in Scotland",
         x = "Year",
-        y = "Percent of Population",
-        colour = "Local Authority Name"
+        y = "Percent",
+        colour = "Local Authority"
     ) +
     scale_color_viridis(discrete = TRUE) +
     theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
           panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
-          panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
-local_authority_plot
+          panel.grid.minor = element_line(color = 'lightgrey', size = .2))
 
-ggplotly(local_authority_plot,tooltip = c("colour","y"))
+local_authority_plot
 ```
 
 
