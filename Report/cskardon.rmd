@@ -112,6 +112,32 @@ df_local_authority_data <- df_all_data |>
         rename(percent_prescribed = value)
 ```
 
+For one of my visualisations, I want to see the difference between 2014 and 2023 in the population percent prescribed 
+drugs for anxiety, depression and psyhosis, so I filter by those two years, `pivot_wider` the data frame to allow me to 
+add a `diff_percent` column to be rendered.
+
+```{r "Work out the percent differences"}
+df_local_authority_change <- df_local_authority_data |> 
+    filter(year %in% c(2014, 2023)) |> 
+    group_by(area_name) |> 
+    pivot_wider(names_from = year, values_from = percent_prescribed) |> 
+    mutate(diff_percent = `2023` - `2014`) 
+```
+
+I want to show the local authorities that have increased _more_ than the average from the National level, so I calculate that
+here finding the values for `2014` and `2023` of the `percent_prescribed` and subtracting the `2014` value from the `2023` one.
+
+```{r "Calculate the total difference"}
+df_national_2014_2023 = df_national_data |> 
+    # Filter years by 2014 and 2023
+    filter(year %in% c(2014, 2023) ) |> 
+    # Pivot those into columns to allow for subtraction
+    pivot_wider(names_from = year, values_from = percent_prescribed)
+
+# Set a variable to be the difference
+national_diff = df_national_2014_2023$`2023` - df_national_2014_2023$`2014`
+```
+
 ## Analysing the data
 
 Running some basic stats for the `national` and `local_authority` data sets.
@@ -130,9 +156,13 @@ df_national_data |>
     )
 df_local_authority_data |> 
     summarise(
+        # Count
         n = n(), 
+        # Mean
         mean = mean(percent_prescribed), 
+        # Standard Deviation
         sd = sd(percent_prescribed), 
+        # Inter-quartile range
         iqr = IQR(percent_prescribed)
     )
 ```
@@ -141,111 +171,78 @@ The biggest differences are the standard deviation (`sd`) and inter-quartile ran
 
 ## Visualisation
 
+First we render a line graph of the national level data, giving a single line.
+
 ```{r "National Data"}
 df_national_data |> 
+    # Plotting the `percent_prescibed` by `year`
     ggplot(aes(x=year, y=percent_prescribed)) +
+    # Adding the points to the graph
     geom_point() +
+    # Plot the line
     geom_path() + 
+    # Setting the limits to the same as will be used for the 'local authority' data so the scales will match
+    # Also adding a tick at every 0.5 percent to make it a bit clearer to read
     scale_y_continuous(limits=c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
+    # Setting the labels for the graph
     labs(
         title = "Population prescribed drugs for anxiety, depression and psychosis in Scotland",
         x = "Year",
         y = "Percent of Population"
     ) +
-    scale_colour_viridis_d() +
+    # Using a minimal theme to make the graph less cluttered
     theme_minimal()
 ```
 
-
-
+We then do the same but for the local authorities. The scale is kept the same to allow for comparison.
 
 ```{r "Local Authority Data"}
 local_authority_plot <- df_local_authority_data |> 
-    ggplot(aes(x=year, y=percent_prescribed, color=area_name)) +
-    # geom_point() +
+    # Plotting the `percent_prescribed` by the `year` using the `area_name` for the colour
+    ggplot(aes(x=year, y=percent_prescribed, colour=area_name)) +
+    # Plot the lines
     geom_path() + 
+    # From the min/max analysis above - I know these ranges are outside the min/max of the data
     scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
+    # Setting the labels
     labs(
         title = "Percent of Population prescribed drugs for anxiety,\ndepression and psychosis for each local authority in Scotland",
         x = "Year",
         y = "Percent",
         colour = "Local Authority"
     ) +
+    # Using the Viridis colour scale for colour blindness safety
     scale_color_viridis(discrete = TRUE) +
+    # I'm setting the panel background to be a different colour to attempt to make the 
+    # lighter Viridis colours show up more
     theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
           panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
           panel.grid.minor = element_line(color = 'lightgrey', size = .2))
 
-local_authority_plot
+# Rendering using Plotly to allow for an easier way to see which local authority is which
+ggplotly(local_authority_plot)
 ```
 
+We now render the change from the first year (`2014`) to the last (`2023`) for each of the local authorities and show the which of those authorities have 
+changed the population prescribed drugs for anxiety, depression and psychosis more than the national average.
 
-```{r "Local Authority Data"}
-local_authority_plot <- df_local_authority_data |> 
-    ggplot(aes(x=year, y=percent_prescribed, color=area_name)) +
-    geom_point() +
-    geom_path() + 
-    scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
+```{r}
+df_local_authority_change |> 
+    # Adding a field `isAbove` to be TRUE or FALSE if the change in percent is above (bigger) than the national average.
+    mutate(isAbove = diff_percent > national_diff) |> 
+    # Plot the percent difference by the area name. The fill is set to be by the `isAbove` field calculated above
+    ggplot( aes(x=reorder(area_name, diff_percent), y=diff_percent, fill=factor(isAbove, c(TRUE, FALSE)))) + 
+    # Rendering a bar chart to show the data
+    geom_bar( stat="identity" ) +
+    # Rendering it in a vertical form as there are too many areas to show in a horizontal way
+    coord_flip() +
+    # Adding the labels
     labs(
-        title = "Population prescribed drugs for anxiety,\ndepression and psychosis for each local authority in Scotland",
-        x = "Year",
-        y = "Percent of Population",
-        colour = "Local Authority Name"
-    ) +
-    scale_color_viridis(discrete = TRUE) +
-    theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
-          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
-          panel.grid.minor = element_line(color = 'lightgrey', size = .2)) 
-          #+ 
-    #geom_text_repel(aes(label = area_name))
- local_authority_plot <- local_authority_plot +
-    gghighlight(area_name %in% c('Midlothian', 'East Lothian', 'Clackmannanshire'),
-              unhighlighted_params = list(linewidth = 0.8,
-                                          colour = alpha("grey", 0.3),
-                                          linetype = "dotted"))
-local_authority_plot
-```
-
-```{r "Work out the percent differences"}
-df_local_authority_change <- df_local_authority_data |> 
-    filter(year %in% c(2014, 2023)) |> 
-    group_by(area_name) |> 
-    pivot_wider(names_from = year, values_from = percent_prescribed) |> 
-    mutate(diff_percent = `2023` - `2014`) 
-```
-
-Add in 'total' difference
-
-```{r "Calculate the total difference"}
-national_diff = max(df_national_data$percent_prescribed) - min(df_national_data$percent_prescribed)
-```
-
-```{r}
-df_local_authority_change |> 
-    ggplot( aes(x=reorder(area_name, diff_percent), y=diff_percent, fill=as.factor(area_name))) + 
-    geom_bar( stat="identity" ) +
-    coord_flip() +
-     labs(
-        title = "Difference between 2014 and 2023 in the percent of the population prescribed\ndrugs for anxiety, depression and psychosis by local authority in Scotland",
-        x = "Local Authority Name",
-        y = "Percent Difference"
-    ) +    
-    scale_fill_viridis(discrete = TRUE) +
-    theme(legend.position = "none")
-```
-
-```{r}
-df_local_authority_change |> 
-    mutate(above = diff_percent > national_diff, below = diff_percent < national_diff) |> 
-    ggplot( aes(x=reorder(area_name, diff_percent), y=diff_percent, fill=factor(above, c(TRUE, FALSE)))) + 
-    geom_bar( stat="identity" ) +
-    coord_flip() +
-     labs(
         title = "Difference between 2014 and 2023 in the percent of the population prescribed\ndrugs for anxiety, depression and psychosis by local authority in Scotland",
         x = "Local Authority Name",
         y = "Percent Difference",
+        # Showing the legend, and what the national difference is (to 2 decimal places)
         fill = sprintf("Above the\nnational difference\n(%.2f %%)", national_diff)
     ) +    
-    #scale_fill_viridis(discrete = TRUE) +
-    theme_bw()
+    theme_minimal()
 ```
