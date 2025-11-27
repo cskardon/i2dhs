@@ -47,7 +47,6 @@ The line charts produced show the general trend
 library("tidyverse")
 library("viridis")
 library('plotly')
-library('sf')
 library('here')
 library('ggrepel')
 library('gghighlight')
@@ -188,7 +187,7 @@ local_authority_plot <- df_local_authority_data |>
     geom_path() + 
     scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
     labs(
-        title = "Population prescribed drugs for anxiety, depression and psychosis for each local authority in Scotland",
+        title = "Population prescribed drugs for anxiety,\ndepression and psychosis for each local authority in Scotland",
         x = "Year",
         y = "Percent of Population",
         colour = "Local Authority Name"
@@ -215,13 +214,19 @@ df_local_authority_change <- df_local_authority_data |>
     mutate(diff_percent = `2023` - `2014`) 
 ```
 
+Add in 'total' difference
+
+```{r "Calculate the total difference"}
+national_diff = max(df_national_data$percent_prescribed) - min(df_national_data$percent_prescribed)
+```
+
 ```{r}
 df_local_authority_change |> 
     ggplot( aes(x=reorder(area_name, diff_percent), y=diff_percent, fill=as.factor(area_name))) + 
     geom_bar( stat="identity" ) +
     coord_flip() +
      labs(
-        title = "Difference between 2014 and 2023 in the percent of the population prescribed drugs for anxiety, depression and psychosis by local authority in Scotland",
+        title = "Difference between 2014 and 2023 in the percent of the population prescribed\ndrugs for anxiety, depression and psychosis by local authority in Scotland",
         x = "Local Authority Name",
         y = "Percent Difference"
     ) +    
@@ -230,64 +235,17 @@ df_local_authority_change |>
 ```
 
 ```{r}
-min_diff = min(df_local_authority_change$diff_percent) # This is the minimum % measurement in the data
-max_diff = max(df_local_authority_change$diff_percent) # This is the max ^^
-diff_measure = max_diff - min_diff # This gets the difference between min and max - so we can...
-
-# Calculate the 'alpha' (opacity) value of colours per '.1' percent.
-# The data is rounded to 1dp, so we do (diff_measure * 10) to remove the dp
-# We divide 1 by ^ because 1 is 'full' opacity (i.e. opaque).
-alpha_step = max_alpha / (diff_measure * 10) 
+df_local_authority_change |> 
+    mutate(above = diff_percent > national_diff, below = diff_percent < national_diff) |> 
+    ggplot( aes(x=reorder(area_name, diff_percent), y=diff_percent, fill=factor(above, c(TRUE, FALSE)))) + 
+    geom_bar( stat="identity" ) +
+    coord_flip() +
+     labs(
+        title = "Difference between 2014 and 2023 in the percent of the population prescribed\ndrugs for anxiety, depression and psychosis by local authority in Scotland",
+        x = "Local Authority Name",
+        y = "Percent Difference",
+        fill = sprintf("Above the\nnational difference\n(%.2f %%)", national_diff)
+    ) +    
+    #scale_fill_viridis(discrete = TRUE) +
+    theme_bw()
 ```
-
-Alpha will essentially become:
-`diff from min value * alpha_step`
-
-We'll use blue (i.e. `RGB(0,0,0, calc_alpha)`) to render the colours, so I need to mutate the df
-
-```{r}
-# This adds the full hex code for the colour to the DF
-df_local_authority_change$colour <- rgb(0,0,1, ((df_local_authority_change$diff_percent - min_diff) * 10) * alpha_step)
-```
-
-```{r 'Tidy data for use in map'}
-df_local_authority_change = (df_local_authority_change)
-```
-
-```{r}
-scotland_la_boundary_map_path <- here('maps/Local_Authority_Boundaries_-_Scotland.json')
-map_scotland_la_boundary <- st_read(scotland_la_boundary_map_path)
-```
-
-
-```{r "ggplot2 version"}
-mapPlot <- ggplot(map_scotland_la_boundary) +
-    ggtitle("% Population prescribed drugs for anxiety, depression and psychosis") + 
-    geom_sf(fill = "white", color = "grey") +
-    theme_void()
-
-for(i in 1:nrow(df_local_authority_change)){
-    # Get the name of the Local Authority
-    la_name <- df_local_authority_change[i, ]$area_name
-    # Finds the boundary to colour by the `la_name`
-    highlight <- map_scotland_la_boundary[map_scotland_la_boundary$local_authority == la_name, ] 
-    # Plots this highlight over the existing map.
-    mapPlot <- mapPlot +
-        geom_sf(data=highlight, fill = df_local_authority_change[i, ]$colour) 
-}
-
-mapPlot <- mapPlot +
-    geom_sf_label(aes(label = local_authority), size = 3, color = "black", fill = "white") 
-
-mapPlot 
-```
-
-# Extra
-
-Greenspace data from: Greenspace Scotland (2018), Third State of Scotland's Greenspace Report. Available at: https://www.greenspacescotland.org.uk/statistics (Accessed: 23rd October 2025)
-
-```{r}
-df_green_space <- read_csv('./data/3rd-state-of-scotlands-greenspace-appendix-6-4.csv')
-```
-
-

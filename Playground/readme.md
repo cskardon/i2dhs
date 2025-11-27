@@ -19,3 +19,5 @@ From https://www.greenspacescotland.org.uk/statistics [Third State of Scotland's
 
 
 Greenspace Scotland (2018), Third State of Scotland's Greenspace Report. Available at: https://www.greenspacescotland.org.uk/statistics (Accessed: 23rd October 2025)
+
+Mid-2024 population estimates - National Records of Scotland (NRS). Available at: https://www.nrscotland.gov.uk/publications/mid-2024-population-estimates/ (Accessed: 27th November 2025)
