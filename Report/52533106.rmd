@@ -1,63 +1,49 @@
 ---
 title: "Introduction to Data Health Science Report"
-author: "Charlotte Skardon (52533106)"
+author: "52533106"
 output: pdf_document
 ---
 
-
-# TOODS
-
-[] Summary
-[] data acquisition,
-[] cleaning,
-[] transformation,
-[] analysis,
-[] visualisation
-
-I want to investigate how the population prescribed drugs for anxiety, depression and psychosis vary geographically 
-and how they have changed over a 10-year period at the Scottish national and local authority level.
-
-1. What are the rates of prescriptions at a national level?
-2. Are there differences in prescriptions between local authorities?
-3. If they have changed, how have they have changed over the ten years at a national level?
-4. If they have changed, how have they have changed over ten years between local authorities?
+# In Scotland, how have the percentages of the population prescribed drugs for anxiety, depression and psychosis changed between 2014 and 2023 at national and local authority level?
 
 ## Summary
 
+The target audience is government and public bodies, to help inform decision making at a local and national level. 
+The key message to convey is how much the population prescribed drugs for anxiety, depression and psychosis has changed, and how that varies regionally.
 
-* Who is your target audience, and what is the key message you aim to convey through your visualisations? 
- 
-The target audience is government and public bodies, to help inform decision making at a local and national level. The key message to convey is how much the population prescribed drugs for anxiety, depression and psychosis has changed, how that varies regionally.
+The data used were from the Scottish Public Health Observatory (ScotPHO) [profiles tool](https://scotland.shinyapps.io/ScotPHO_profiles_tool/). The population percentage prescribed drugs for anxiety, depression and psychosis indicator were selected for the Inequalities ‘Council Area' and 'Scotland' datasets, covering the years from 2014 to 2023, and the 'total' value was used. 
 
-* What data did you use to produce your visualisation? What are the limitations of these data? 
+One of the main limitations of the data is the granularity, it has the percentage of the population, but doesn't show the actual population, so it's difficult to gauge how many people this affects. For example, the Glasgow City is the most populous authority (at 650,300 according to the Mid-2024 population estimates - National Records of Scotland (2025) whereas Orkney has a population of 22,020). 
 
-The data used were from the Scottish Public Health Observatory (ScotPHO) [profiles tool](https://scotland.shinyapps.io/ScotPHO_profiles_tool/). The the population percentage prescribed drugs for anxiety, depression and psychosis indicator was selected for the Inequalities  'Council Area' and 'Scotland' datasets, covering the years from 2014 to 2023, and the 'total' value was used. 
+It provides very broad data and doesn’t stratify by any demographic status of the population aside from the Scottish Index of Multiple Deprivation (SIMD) quintiles.
 
-*********The main limitations of the data is the granularity, it has the percentage of the 
-population, but doesn't show the actual population, so it's difficult to guage how many people this affects.
-For example, the Glasgow City is the most populous authority, and 22.5 - Orkney 19.6
+From a policy perspective not knowing the absolute numbers or demographics makes it harder to know where potential interventions would be best placed, a small increase or decrease in the number of people prescribed drugs for anxiety, depression and psychosis would have a much bigger effect on the percentage for Orkney than for Glasgow City.
 
-* What are the strengths and limitations of the analytical and visualisation approach you adopted?
+The analytical process of basic statistics and differences shows that there is a variation between the local authority areas, but that they are all trending upwards.
 
-The line charts produced show the general trend
+The line charts produced show the general trend for the national and local authority levels.
+
+The national line graph shows that there is a consistent trend of an increasing percent of the population prescribed drugs for anxiety, depression and psychosis with a dip in 2020. I think this is clear and shows what it is intended to show.
+
+The local authorities line graph shows that there is difference between the different authorities, but it is very busy and hard to differentiate the specific local authorities. This is mitigated slightly using `plotly` to allow for interaction in the live version of the graph, thought this translates less well to the static nature of a PDF.
+
+The final bar chart shows the difference between 2014 and 2023 in the percent population prescribed drugs for anxiety, depression and psychosis. This is effective in showing that the difference is not equal between each local authority. There is a lot of data shown, but in this instance, it is readable. The chart was ordered by the percentage (decreasing) to make it easier to see and compare the differences.
+
 
 ## Libraries
 
-```{r "Import Libraries"}
+```{r results='hide', "Import Libraries"}
 library("tidyverse")
 library("viridis")
 library('plotly')
-library('here')
-library('ggrepel')
-library('gghighlight')
 ```
 
 ## Data Acquisition - Read in data files
 
-Local and national data from the The Scottish Public Health Observatory (ScotPHO) Online Profiles Tool (2025) website. Available at: https://scotland.shinyapps.io/ScotPHO_profiles_tool/ (Accessed: 03 November 2025).
+Local and national data from the The Scottish Public Health Observatory (ScotPHO) Online Profiles Tool (2025) (website)[https://scotland.shinyapps.io/ScotPHO_profiles_tool/].
 
 ```{r "Read in the ScotPHO data"}
-df_all_data <- read_csv('./data/ScotPHO_Population prescribed drugs for anxiety depression and psychosis_allyears_national_and_council_extract_2025-11-03.csv')
+df_all_data <- read_csv('./data/ScotPHO_pop_drugs_adp_2025-11-03.csv')
 ```
 
 ## Cleaning and transforming the data
@@ -68,13 +54,15 @@ We're only actually interested in the `Total` data, so we'll filter on that, and
 df_all_data |> 
     # Filtering by the 'total' quintile, as that's what we're interested in
     filter(quintile == 'Total') |> 
-    # Getting the count (`n`) and the min/max values for the `value` and `year` columns to see 
-    # if anything is out of the expected range
+    # Getting the count (`n`) and the min/max values for the `value` and `year` 
+    # columns to see if anything is out of the expected range
     # Also checking for missing (`na`) values in the columns
     summarise(
         n = n(), 
-        minValue = min(value, na.rm=TRUE), maxValue = max(value, na.rm=TRUE), missingValue = sum(is.na(value)),
-        minYear = min(year), maxYear = max(year), missingYear = sum(is.na(year))
+        minValue = min(value, na.rm=TRUE), maxValue = max(value, na.rm=TRUE), 
+        missingValue = sum(is.na(value)),
+        minYear = min(year), maxYear = max(year), 
+        missingYear = sum(is.na(year))
     )
 ```
 
@@ -104,7 +92,8 @@ df_national_data <- df_all_data |>
         rename(percent_prescribed = value)
 
 df_local_authority_data <- df_all_data |>
-        # Filtering by 'Total' values and where the 'area_type' is the Council Area to get Local Authority data
+        # Filtering by 'Total' values and where the 'area_type' is the 
+        # Council Area to get Local Authority data
         filter(quintile == "Total" & area_type=="Council area") |> 
         # Selecting the 'year', 'value' and 'area_name' for the local authorities
         select(c("year", "area_name", "value")) |> 
@@ -118,9 +107,13 @@ add a `diff_percent` column to be rendered.
 
 ```{r "Work out the percent differences"}
 df_local_authority_change <- df_local_authority_data |> 
+    # First filter by the first and last years in the data set
     filter(year %in% c(2014, 2023)) |> 
+    # Group it by the area name
     group_by(area_name) |> 
+    # Pivot the data frame wider to allow the creation of a `diff_percent` column
     pivot_wider(names_from = year, values_from = percent_prescribed) |> 
+    # Create the `diff_percent` column subtracting the 2014 value from the 2023 one
     mutate(diff_percent = `2023` - `2014`) 
 ```
 
@@ -142,7 +135,7 @@ national_diff = df_national_2014_2023$`2023` - df_national_2014_2023$`2014`
 
 Running some basic stats for the `national` and `local_authority` data sets.
 
-```{r}
+```{r "Summarising the National and Local Authority data frames"}
 df_national_data |> 
     summarise(
         # Count
@@ -181,12 +174,16 @@ df_national_data |>
     geom_point() +
     # Plot the line
     geom_path() + 
-    # Setting the limits to the same as will be used for the 'local authority' data so the scales will match
-    # Also adding a tick at every 0.5 percent to make it a bit clearer to read
+    # Setting the limits to the same as will be used for the 'local authority' data so 
+    # the scales will match Also adding a tick at every 0.5 percent to make it a bit 
+    # clearer to read
     scale_y_continuous(limits=c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
     # Setting the labels for the graph
     labs(
-        title = "Population prescribed drugs for anxiety, depression and psychosis in Scotland",
+        title = paste(
+          "Population prescribed drugs for anxiety,",
+          "\ndepression and psychosis in Scotland"
+          ),
         x = "Year",
         y = "Percent of Population"
     ) +
@@ -202,43 +199,65 @@ local_authority_plot <- df_local_authority_data |>
     ggplot(aes(x=year, y=percent_prescribed, colour=area_name)) +
     # Plot the lines
     geom_path() + 
-    # From the min/max analysis above - I know these ranges are outside the min/max of the data
+    # From the min/max analysis above - I know 
+    # these ranges are outside the min/max of the data
     scale_y_continuous(limits = c(13.5,26), breaks = seq(13.5, 26, 0.5)) +
     # Setting the labels
     labs(
-        title = "Percent of Population prescribed drugs for anxiety,\ndepression and psychosis for each local authority in Scotland",
+        title = paste(
+            "Percent of Population prescribed",
+            "\ndrugs for anxiety, depression",
+            "\nand psychosis for each local",
+            "\nauthority in Scotland"
+            ),
         x = "Year",
         y = "Percent",
         colour = "Local Authority"
     ) +
     # Using the Viridis colour scale for colour blindness safety
     scale_color_viridis(discrete = TRUE) +
-    # I'm setting the panel background to be a different colour to attempt to make the 
-    # lighter Viridis colours show up more
-    theme(panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
-          panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
-          panel.grid.minor = element_line(color = 'lightgrey', size = .2))
+    # I'm setting the panel background to be a different colour to make the 
+    # lighter Viridis colours show up more clearly
+    theme(
+        panel.background = element_rect(fill = '#f5f5f5ff', color = 'black'),
+        panel.grid.major = element_line(color = 'lightgrey', linetype = 'dotted'),
+        panel.grid.minor = element_line(color = 'lightgrey', linewidth = .2)
+        
+    )
 
 # Rendering using Plotly to allow for an easier way to see which local authority is which
-ggplotly(local_authority_plot)
+#ggplotly(local_authority_plot)
+local_authority_plot
 ```
 
 We now render the change from the first year (`2014`) to the last (`2023`) for each of the local authorities and show the which of those authorities have 
 changed the population prescribed drugs for anxiety, depression and psychosis more than the national average.
 
-```{r}
+```{r "Differences between 2014 and 2023 by local authorities as a bar chart"}
 df_local_authority_change |> 
-    # Adding a field `isAbove` to be TRUE or FALSE if the change in percent is above (bigger) than the national average.
+    # Adding a field `isAbove` to be TRUE or FALSE if the change in percent 
+    # is above (bigger) than the national average.
     mutate(isAbove = diff_percent > national_diff) |> 
-    # Plot the percent difference by the area name. The fill is set to be by the `isAbove` field calculated above
-    ggplot( aes(x=reorder(area_name, diff_percent), y=diff_percent, fill=factor(isAbove, c(TRUE, FALSE)))) + 
+    # Plot the percent difference by the area name. The fill is set to be 
+    # by the `isAbove` field calculated above
+    ggplot( aes(
+      x=reorder(area_name, diff_percent), 
+      y=diff_percent, 
+      fill=factor(isAbove, c(TRUE, FALSE)))
+    ) + 
     # Rendering a bar chart to show the data
     geom_bar( stat="identity" ) +
-    # Rendering it in a vertical form as there are too many areas to show in a horizontal way
+    # Rendering it in a vertical form as there are 
+    # too many areas to show in a horizontal way
     coord_flip() +
     # Adding the labels
     labs(
-        title = "Difference between 2014 and 2023 in the percent of the population prescribed\ndrugs for anxiety, depression and psychosis by local authority in Scotland",
+        title = paste(
+            "Difference between 2014 and 2023 in the percent",
+            "\npopulation prescribed drugs for anxiety,", 
+            "\ndepression and psychosis by local authority",
+            "\nin Scotland"
+        ),
         x = "Local Authority Name",
         y = "Percent Difference",
         # Showing the legend, and what the national difference is (to 2 decimal places)
@@ -246,3 +265,8 @@ df_local_authority_change |>
     ) +    
     theme_minimal()
 ```
+
+## References
+
+* The Scottish Public Health Observatory. Available at: https://scotland.shinyapps.io/ScotPHO_profiles_tool/ (Accessed: 3rd November 2025)
+* Mid-2024 population estimates - National Records of Scotland (NRS). Available at: https://www.nrscotland.gov.uk/publications/mid-2024-population-estimates/ (Accessed: 27th November 2025)
