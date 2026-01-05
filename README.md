@@ -27,3 +27,5 @@ NB: Lock file is ONLY updated when a package is used, and probably need to call 
 
 `CTRL` + `SHIFT` + `F10` = Restart R Session
 `CTRL` + `L`  = Clear console
+`CTRL` + `SHIFT` + `I` = insert code snippet
+`CTRL` + `SHIFT` + `M` = insert pipe (`|>`)
