@@ -1,0 +1,5 @@
+
+```{r}
+text_num <- c("42", "3.14", "100")
+num <- as.numeric(text_num)
+```
