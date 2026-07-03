@@ -3,3 +3,12 @@
 text_num <- c("42", "3.14", "100")
 num <- as.numeric(text_num)
 ```
+
+If working with a existing repository
+1. Clone first
+
+Then...
+2. Write stuff
+3. Commit (local on your machine)
+4. Optional repeat 1-2
+5. push
